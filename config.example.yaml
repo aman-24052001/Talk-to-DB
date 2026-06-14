@@ -1,0 +1,40 @@
+# ============================================================
+#  Talk-to-DB v3 — the ONLY file you need to edit.
+#
+#  1. Copy this to config.yaml
+#  2. Paste your Anthropic API key
+#  3. Point database.url at your database
+#  4. python run.py  →  http://127.0.0.1:7860
+# ============================================================
+
+anthropic:
+  api_key: ""                       # sk-ant-… (ANTHROPIC_API_KEY env var overrides)
+  model: "claude-sonnet-4-6"
+
+database:
+  # Any SQLAlchemy URL. Examples:
+  #   sqlite:///data/demo.db            ← bundled demo (default)
+  #   postgresql+psycopg2://user:pass@host:5432/dbname
+  #   mysql+pymysql://user:pass@host:3306/dbname
+  url: "sqlite:///data/demo.db"
+
+# ── Everything below is optional — safe defaults are built in ──
+guardrails:
+  read_only: true                   # hard-blocks anything that is not a SELECT
+  max_rows: 200                     # rows returned to the UI (LIMIT force-injected)
+  max_result_rows_to_model: 50      # rows the LLM sees when summarising
+  statement_timeout_seconds: 15     # per-query wall-clock timeout
+  max_agent_turns: 6                # self-correction budget before giving up
+  history_turns: 6                  # how many prior conversation turns to keep in context
+  allowed_tables: []                # empty = all introspected tables
+  denied_tables: []                 # always hidden (e.g. ["users_pii", "audit_log"])
+  sample_rows_in_schema: 3          # 0 = never send real cell values to the LLM
+
+server:
+  host: "127.0.0.1"                 # keep loopback unless you know what you're doing
+  port: 7860
+  auth_token: ""                    # set to require  Authorization: Bearer <token>
+  rate_limit_per_minute: 30
+
+logging:
+  audit_file: "data/audit.log"      # every SQL executed or blocked is recorded here

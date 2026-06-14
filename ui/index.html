@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TALK-TO-DB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F0EDE3; --ink:#111111; --card:#FFFFFF;
+  --yellow:#FFCF00; --pink:#FF90E8; --blue:#2F6BFF;
+  --green:#00C16A; --red:#FF4D26; --orange:#FF8C00;
+  --bw:3px; --sh:6px 6px 0 var(--ink); --sh-sm:4px 4px 0 var(--ink);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Space Grotesk',sans-serif;background:var(--paper);color:var(--ink);
+  background-image:radial-gradient(rgba(17,17,17,.10) 1.2px,transparent 1.2px);
+  background-size:26px 26px;
+}
+::selection{background:var(--yellow)}
+button{font-family:inherit;cursor:pointer}
+:focus-visible{outline:3px dashed var(--blue);outline-offset:3px}
+
+/* ── frame ── */
+.app{display:grid;grid-template-rows:auto 1fr;height:100vh;overflow:hidden}
+header{
+  display:flex;align-items:center;gap:12px;padding:12px 20px;
+  background:var(--paper);border-bottom:var(--bw) solid var(--ink);z-index:10;flex-wrap:wrap;
+}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink)}
+.logo-mark{
+  width:42px;height:42px;background:var(--yellow);border:var(--bw) solid var(--ink);
+  box-shadow:var(--sh-sm);display:grid;place-items:center;
+  font-family:'Archivo Black';font-size:13px;transform:rotate(-4deg);flex-shrink:0;
+}
+.logo h1{font-family:'Archivo Black';font-size:22px;letter-spacing:.5px}
+.logo h1 span{background:var(--ink);color:var(--yellow);padding:0 6px;margin-left:3px}
+.spacer{flex:1}
+.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{
+  font-family:'JetBrains Mono';font-size:11px;font-weight:700;letter-spacing:.4px;
+  border:2px solid var(--ink);padding:4px 9px;background:var(--card);box-shadow:3px 3px 0 var(--ink);
+  display:inline-flex;align-items:center;gap:5px;text-transform:uppercase;white-space:nowrap;
+}
+.chip .dot{width:8px;height:8px;border:2px solid var(--ink);background:var(--green);display:inline-block;flex-shrink:0}
+.chip.bad .dot{background:var(--red)}
+.chip.ro{background:var(--green);color:#fff;-webkit-text-stroke:.2px var(--ink)}
+.chip.model{background:var(--pink)}
+
+/* header action buttons */
+.hdr-btn{
+  font-family:'JetBrains Mono';font-size:11px;font-weight:700;
+  border:2px solid var(--ink);background:var(--card);padding:5px 10px;
+  box-shadow:3px 3px 0 var(--ink);transition:transform .05s,box-shadow .05s;
+  text-transform:uppercase;
+}
+.hdr-btn:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
+.hdr-btn.schema-toggle{display:none}  /* shown on mobile */
+
+/* ── body layout ── */
+.body{display:grid;grid-template-columns:300px 1fr;min-height:0;overflow:hidden}
+
+/* ── sidebar ── */
+aside{
+  border-right:var(--bw) solid var(--ink);padding:16px;overflow-y:auto;
+  background:repeating-linear-gradient(-45deg,transparent 0 14px,rgba(17,17,17,.03) 14px 28px),var(--paper);
+  display:flex;flex-direction:column;gap:12px;
+}
+.panel-title{
+  font-family:'Archivo Black';font-size:12px;letter-spacing:1px;display:flex;
+  align-items:center;justify-content:space-between;text-transform:uppercase;
+}
+.refresh{
+  font-family:'JetBrains Mono';font-size:10px;font-weight:700;border:2px solid var(--ink);
+  background:var(--card);padding:3px 7px;box-shadow:3px 3px 0 var(--ink);transition:transform .05s,box-shadow .05s;
+}
+.refresh:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
+.tbl{border:var(--bw) solid var(--ink);background:var(--card);box-shadow:var(--sh-sm)}
+.tbl-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:9px 11px;cursor:pointer;user-select:none;
+}
+.tbl-head:hover{background:var(--yellow)}
+.tbl-name{font-family:'JetBrains Mono';font-weight:700;font-size:12px}
+.tbl-rows{font-family:'JetBrains Mono';font-size:10px;opacity:.6}
+.tbl-cols{display:none;border-top:2px solid var(--ink);padding:8px 11px;background:#FBFAF5}
+.tbl.open .tbl-cols{display:block}
+.col{
+  display:flex;align-items:center;justify-content:space-between;
+  font-family:'JetBrains Mono';font-size:11px;padding:2px 0;
+}
+.col .t{opacity:.55;font-size:10px}
+.col .pk{background:var(--yellow);border:1.5px solid var(--ink);font-size:9px;padding:0 3px;margin-left:5px}
+.side-note{font-family:'JetBrains Mono';font-size:10px;line-height:1.7;border:2px dashed var(--ink);padding:9px;background:var(--card)}
+
+/* ── main chat area ── */
+main{display:grid;grid-template-rows:1fr auto;min-height:0;overflow:hidden}
+
+#stream{
+  overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px;
+}
+
+/* welcome card */
+.hello{max-width:680px;border:var(--bw) solid var(--ink);background:var(--card);box-shadow:var(--sh);padding:22px}
+.hello h2{font-family:'Archivo Black';font-size:22px;margin-bottom:10px}
+.hello h2 em{font-style:normal;background:var(--pink);padding:0 7px;border:var(--bw) solid var(--ink);display:inline-block;transform:rotate(-1.2deg)}
+.hello p{font-size:14px;line-height:1.6;margin-bottom:16px}
+.sugg{display:flex;flex-wrap:wrap;gap:8px}
+.sugg button{
+  font-family:'JetBrains Mono';font-size:11px;border:2px solid var(--ink);
+  background:var(--paper);padding:6px 11px;box-shadow:var(--sh-sm);
+  transition:transform .05s,box-shadow .05s;text-align:left;
+}
+.sugg button:hover{background:var(--yellow)}
+.sugg button:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
+.sugg button.danger{border-color:var(--red);color:var(--red)}
+.sugg button.danger:hover{background:#FFF0EE}
+
+/* messages */
+.msg{display:flex;flex-direction:column;gap:4px;max-width:900px}
+.who{font-family:'JetBrains Mono';font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;opacity:.5}
+.msg.user .bubble{
+  background:var(--yellow);border:var(--bw) solid var(--ink);box-shadow:var(--sh-sm);
+  padding:12px 16px;font-size:15px;line-height:1.5;align-self:flex-start;max-width:70%;
+}
+.msg.bot .card{
+  border:var(--bw) solid var(--ink);background:var(--card);box-shadow:var(--sh);
+  overflow:hidden;
+}
+
+/* thinking / live stream */
+.thinking-bar{
+  padding:12px 16px;display:flex;align-items:center;gap:10px;
+  font-family:'JetBrains Mono';font-size:12px;border-bottom:2px solid var(--ink);
+  background:linear-gradient(90deg,var(--paper),var(--card));
+}
+.thinking-bar .spinner{
+  width:16px;height:16px;border:2px solid var(--ink);border-top-color:transparent;
+  border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.live-steps{padding:10px 16px;display:flex;flex-direction:column;gap:6px}
+.live-step{
+  font-family:'JetBrains Mono';font-size:11px;padding:5px 9px;
+  border:1.5px solid var(--ink);display:flex;align-items:center;gap:8px;
+}
+.live-step.sql{background:#EFFFED;border-color:var(--green)}
+.live-step.blocked{background:#FFF1EC;border-color:var(--red)}
+.live-step.error{background:#FFF8EC;border-color:var(--orange)}
+.live-step .step-icon{font-size:14px}
+.live-step .step-sql{
+  font-size:10px;opacity:.7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:480px;
+}
+
+/* answer card */
+.answer{padding:16px 18px;font-size:15px;line-height:1.6;border-bottom:2px solid var(--ink);white-space:pre-wrap}
+
+/* stamp strip */
+.stamps{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px;border-bottom:2px solid var(--ink);background:#FAFAF7}
+.stamp{
+  font-family:'JetBrains Mono';font-size:10px;font-weight:700;letter-spacing:.3px;
+  border:2px solid var(--ink);padding:3px 8px;background:var(--card);text-transform:uppercase;
+}
+.stamp.ok{background:var(--green);color:#fff}
+.stamp.block{background:var(--red);color:#fff}
+.stamp.warn{background:var(--yellow)}
+.stamp.meta{background:var(--card)}
+
+/* blocked/error cards in response */
+.failwrap{padding:12px 16px;border-bottom:2px solid var(--ink);display:flex;flex-direction:column;gap:8px;background:#FFF5F2}
+.failcard{border:2px solid var(--ink);background:var(--card);box-shadow:3px 3px 0 var(--red)}
+.failhead{font-family:'Archivo Black';font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:4px 9px;background:var(--red);color:#fff;border-bottom:2px solid var(--ink)}
+.failsql{font-family:'JetBrains Mono';font-size:11px;padding:8px 11px;white-space:pre-wrap;word-break:break-all;border-bottom:1px solid rgba(0,0,0,.1)}
+.faildetail{font-family:'JetBrains Mono';font-size:10px;padding:5px 11px;opacity:.7}
+
+/* SQL bar */
+.sqlbar{display:flex;gap:8px;padding:10px 16px;border-bottom:2px solid var(--ink);align-items:center}
+.mini{
+  font-family:'JetBrains Mono';font-size:10px;font-weight:700;border:2px solid var(--ink);
+  background:var(--paper);padding:3px 8px;box-shadow:var(--sh-sm);transition:transform .05s,box-shadow .05s;
+}
+.mini:hover{background:var(--yellow)}
+.mini:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
+.sqlbox{border-bottom:2px solid var(--ink);background:#1a1a2e}
+.sqlbox pre{
+  font-family:'JetBrains Mono';font-size:12px;padding:14px 16px;
+  color:#e0e0ff;white-space:pre-wrap;word-break:break-all;line-height:1.5;
+}
+
+/* results table */
+.tablewrap{overflow-x:auto;border-bottom:2px solid var(--ink)}
+table{border-collapse:collapse;width:100%;font-family:'JetBrains Mono';font-size:12px}
+th{padding:8px 12px;background:var(--ink);color:#fff;text-align:left;white-space:nowrap}
+td{padding:7px 11px;border-bottom:1.5px solid var(--ink);vertical-align:top}
+tr:nth-child(even) td{background:#FAFAF7}
+td.num{text-align:right;font-weight:700}
+.nul{opacity:.35;font-style:italic}
+.trunc{font-family:'JetBrains Mono';font-size:11px;padding:8px 16px;background:var(--yellow);border-top:2px solid var(--ink)}
+
+/* error card (API/network failure) */
+.errcard{
+  max-width:720px;background:#FFE9E2;border:var(--bw) solid var(--ink);box-shadow:6px 6px 0 var(--red);
+  padding:16px 18px;font-size:14px;line-height:1.6;
+}
+.errcard b{display:block;font-family:'Archivo Black';font-size:13px;margin-bottom:6px}
+
+/* ── composer ── */
+.composer{
+  border-top:var(--bw) solid var(--ink);background:var(--paper);
+  padding:14px 22px;display:flex;gap:12px;align-items:flex-end;
+}
+#q{
+  flex:1;resize:none;border:var(--bw) solid var(--ink);background:var(--card);
+  box-shadow:var(--sh-sm);padding:10px 14px;font-family:'Space Grotesk';font-size:15px;
+  line-height:1.5;min-height:44px;max-height:160px;
+}
+#q:focus{outline:3px solid var(--blue);outline-offset:0}
+#ask{
+  font-family:'Archivo Black';font-size:15px;letter-spacing:.5px;border:var(--bw) solid var(--ink);
+  background:var(--yellow);padding:10px 20px;box-shadow:var(--sh-sm);
+  transition:transform .05s,box-shadow .05s;white-space:nowrap;
+}
+#ask:hover{background:#f5c400}
+#ask:active{transform:translate(4px,4px);box-shadow:0 0 0 var(--ink)}
+#ask:disabled{opacity:.45;pointer-events:none}
+.composer-hint{font-family:'JetBrains Mono';font-size:10px;opacity:.5;align-self:center}
+
+/* ── mobile schema drawer ── */
+.schema-overlay{
+  display:none;position:fixed;inset:0;z-index:50;
+}
+.schema-overlay.open{display:block}
+.schema-backdrop{position:absolute;inset:0;background:rgba(17,17,17,.5)}
+.schema-drawer{
+  position:absolute;top:0;left:0;bottom:0;width:min(320px,90vw);
+  background:var(--paper);border-right:var(--bw) solid var(--ink);
+  overflow-y:auto;padding:16px;z-index:1;
+  display:flex;flex-direction:column;gap:12px;
+}
+.drawer-close{
+  font-family:'Archivo Black';font-size:12px;border:var(--bw) solid var(--ink);
+  background:var(--red);color:#fff;padding:6px 12px;align-self:flex-end;
+  box-shadow:var(--sh-sm);
+}
+
+/* ── responsive ── */
+@media (max-width:900px){
+  .body{grid-template-columns:1fr}
+  aside{display:none}
+  .hdr-btn.schema-toggle{display:inline-flex}
+  .tagline{display:none}
+  .msg.user .bubble{max-width:90%}
+  .live-step .step-sql{max-width:200px}
+}
+@media (max-width:500px){
+  header{padding:10px 14px;gap:8px}
+  #stream{padding:14px}
+  .composer{padding:10px 14px;gap:8px}
+  .chip{font-size:10px;padding:3px 7px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="logo" href="#">
+      <div class="logo-mark">T→DB</div>
+      <h1>TALK-TO<span>DB</span></h1>
+    </a>
+    <div class="spacer"></div>
+    <div class="chips">
+      <span class="chip" id="chip-conn"><span class="dot"></span><span id="conn-text">CONNECTING…</span></span>
+      <span class="chip ro">⛨ READ-ONLY</span>
+      <span class="chip model" id="chip-model">CLAUDE</span>
+    </div>
+    <button class="hdr-btn schema-toggle" id="schema-toggle-btn" title="Show schema">⊞ SCHEMA</button>
+    <button class="hdr-btn" id="clear-btn" title="New conversation">↺ NEW</button>
+  </header>
+
+  <!-- mobile schema drawer -->
+  <div class="schema-overlay" id="schema-overlay">
+    <div class="schema-backdrop" id="schema-backdrop"></div>
+    <div class="schema-drawer">
+      <div class="panel-title">
+        Schema
+        <button class="drawer-close" id="drawer-close">✕ CLOSE</button>
+      </div>
+      <div id="drawer-tables"><div class="side-note">Loading…</div></div>
+      <div class="side-note">AST firewall: single SELECT, schema-scoped tables, LIMIT enforced, physically read-only.</div>
+    </div>
+  </div>
+
+  <div class="body">
+    <aside>
+      <div class="panel-title">Schema <button class="refresh" id="refresh">↻ REFRESH</button></div>
+      <div id="tables"><div class="side-note">Introspecting database…</div></div>
+      <div class="side-note">AST firewall: single SELECT, schema-scoped tables, LIMIT enforced, physically read-only.</div>
+    </aside>
+
+    <main>
+      <div id="stream">
+        <div class="hello">
+          <h2>Ask your database <em>anything</em>.</h2>
+          <p>Type a question in plain English. The agent writes SQL, runs it safely through a two-layer guardrail, and shows you the exact query and results. You always see what ran and why.</p>
+          <div class="sugg" id="sugg">
+            <button data-q="Top 5 brands by total revenue from completed orders">▸ Top 5 brands by revenue</button>
+            <button data-q="Show monthly revenue for 2026 from completed orders">▸ Monthly revenue 2026</button>
+            <button data-q="Which city has the most customers?">▸ Biggest customer city</button>
+            <button data-q="Total stock value of Nike t-shirts after applying discounts">▸ Nike stock after discounts</button>
+            <button class="danger" data-q="Delete all cancelled orders">⚠ Try a write — watch it block</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="composer">
+        <textarea id="q" rows="1" placeholder="e.g. Average order value by city, completed orders only…" aria-label="Ask a question"></textarea>
+        <button id="ask">ASK →</button>
+        <span class="composer-hint">⏎ send &nbsp;·&nbsp; shift+⏎ newline</span>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   Talk-to-DB v3 — SSE streaming frontend.
+   All DB values rendered via textContent / esc() — never innerHTML
+   with raw data. XSS-safe.
+============================================================ */
+const $ = (s, el=document) => el.querySelector(s);
+const stream = $('#stream'), qEl = $('#q'), askBtn = $('#ask');
+
+// conversation history sent to backend for multi-turn context
+let history = [];
+
+const esc = s => String(s).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ── backend API ── */
+const api = window.TTDB_API || {
+  schema: async (refresh=false) => {
+    const r = await fetch('/api/schema' + (refresh ? '?refresh=1' : ''));
+    if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+    return r.json();
+  },
+  health: async () => (await fetch('/api/health')).json(),
+  askStream: (question, hist) => fetch('/api/ask/stream', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({question, history: hist}),
+  }),
+};
+
+/* ── boot ── */
+async function boot() {
+  try {
+    const [h, s] = await Promise.all([api.health(), api.schema()]);
+    const dialect = (h.dialect || s.dialect || 'DB').toUpperCase();
+    $('#conn-text').textContent = dialect + ' · LIVE';
+    $('#chip-model').textContent = (h.model || 'claude').replace('claude-','').toUpperCase();
+    if (h.api_key_present === false) {
+      $('#chip-conn').classList.add('bad');
+      $('#conn-text').textContent = 'NO API KEY';
+    }
+    renderSchema(s, '#tables');
+    renderSchema(s, '#drawer-tables');
+  } catch(e) {
+    $('#chip-conn').classList.add('bad');
+    $('#conn-text').textContent = 'OFFLINE';
+    const msg = `<div class="side-note">Could not reach backend: ${esc(e.message)}</div>`;
+    $('#tables').innerHTML = msg;
+    $('#drawer-tables').innerHTML = msg;
+  }
+}
+
+function renderSchema(s, selector) {
+  const el = $(selector);
+  if (!el) return;
+  if (!s.tables || !s.tables.length) {
+    el.innerHTML = '<div class="side-note">No tables found.</div>';
+    return;
+  }
+  el.innerHTML = s.tables.map(t => `
+    <div class="tbl">
+      <div class="tbl-head" role="button" tabindex="0" aria-expanded="false">
+        <span class="tbl-name">▦ ${esc(t.name)}</span>
+        <span class="tbl-rows">${t.row_count ?? '–'} rows</span>
+      </div>
+      <div class="tbl-cols">
+        ${t.columns.map(c => `
+          <div class="col">
+            <span>${esc(c.name)}${c.pk ? '<span class="pk">PK</span>':''}</span>
+            <span class="t">${esc(c.type)}</span>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+  el.querySelectorAll('.tbl-head').forEach(h => {
+    const toggle = () => {
+      const p = h.parentElement;
+      p.classList.toggle('open');
+      h.setAttribute('aria-expanded', p.classList.contains('open'));
+    };
+    h.addEventListener('click', toggle);
+    h.addEventListener('keydown', e => {
+      if (e.key==='Enter'||e.key===' ') { e.preventDefault(); toggle(); }
+    });
+  });
+}
+
+/* ── schema refresh ── */
+async function refreshSchema() {
+  try {
+    const s = await api.schema(true);
+    renderSchema(s, '#tables');
+    renderSchema(s, '#drawer-tables');
+  } catch {}
+}
+$('#refresh').addEventListener('click', refreshSchema);
+
+/* ── mobile schema drawer ── */
+const overlay = $('#schema-overlay');
+const openDrawer  = () => overlay.classList.add('open');
+const closeDrawer = () => overlay.classList.remove('open');
+$('#schema-toggle-btn').addEventListener('click', openDrawer);
+$('#drawer-close').addEventListener('click', closeDrawer);
+$('#schema-backdrop').addEventListener('click', closeDrawer);
+
+/* ── clear conversation ── */
+$('#clear-btn').addEventListener('click', () => {
+  history = [];
+  stream.innerHTML = '';
+  // re-add welcome card
+  const hello = document.createElement('div');
+  hello.className = 'hello';
+  hello.innerHTML = `
+    <h2>Ask your database <em>anything</em>.</h2>
+    <p>Conversation cleared. Ask a new question below.</p>`;
+  stream.appendChild(hello);
+  qEl.focus();
+});
+
+/* ── message helpers ── */
+function addUser(text) {
+  const d = document.createElement('div');
+  d.className = 'msg user';
+  d.innerHTML = `<span class="who">You</span><div class="bubble">${esc(text)}</div>`;
+  stream.appendChild(d);
+  scroll();
+}
+
+function addBotShell() {
+  const d = document.createElement('div');
+  d.className = 'msg bot';
+  d.innerHTML = `<span class="who">Talk-to-DB</span><div class="card"></div>`;
+  stream.appendChild(d);
+  scroll();
+  return d.querySelector('.card');
+}
+
+function makeThinkingBar(label) {
+  const bar = document.createElement('div');
+  bar.className = 'thinking-bar';
+  bar.innerHTML = `<div class="spinner"></div><span class="thinking-label">${esc(label)}</span>`;
+  return bar;
+}
+
+function makeLiveStep(kind, sql, detail) {
+  const icons = {sql:'✓', blocked:'⊘', error:'✗', thinking:'◌'};
+  const labels = {sql:'executed', blocked:'blocked by firewall', error:'query error', thinking:'calling model'};
+  const s = document.createElement('div');
+  s.className = `live-step ${kind}`;
+  const sqlSnip = sql ? `<span class="step-sql">${esc(sql)}</span>` : '';
+  const det = detail ? ` — ${esc(detail.slice(0,80))}` : '';
+  s.innerHTML = `<span class="step-icon">${icons[kind]||'·'}</span><span>${labels[kind]||kind}${det}</span>${sqlSnip}`;
+  return s;
+}
+
+function renderFinalCard(card, data) {
+  let html = `<div class="answer">${esc(data.answer)}</div>`;
+
+  // stamp strip
+  const stamps = [];
+  stamps.push(`<span class="stamp ok">✓ firewall pass</span>`);
+  if (data.blocked > 0) stamps.push(`<span class="stamp block">⊘ ${data.blocked} blocked</span>`);
+  stamps.push(`<span class="stamp ok">⛨ read-only</span>`);
+  if (data.row_count != null && data.sql) stamps.push(`<span class="stamp meta">${data.row_count} rows</span>`);
+  if (data.truncated) stamps.push(`<span class="stamp warn">⚠ limit hit</span>`);
+  stamps.push(`<span class="stamp meta">${data.turns} turn${data.turns===1?'':'s'}</span>`);
+  stamps.push(`<span class="stamp meta">${data.elapsed_ms}ms</span>`);
+  html += `<div class="stamps">${stamps.join('')}</div>`;
+
+  // failed steps
+  const fails = (data.steps||[]).filter(s => s.kind !== 'sql');
+  if (fails.length) {
+    html += `<div class="failwrap">${fails.map(s => `
+      <div class="failcard">
+        <div class="failhead">${s.kind==='blocked' ? '⊘ blocked by firewall' : '✗ sql error (model retried)'}</div>
+        <pre class="failsql">${esc(s.sql)}</pre>
+        <div class="faildetail">${esc(s.detail)}</div>
+      </div>`).join('')}</div>`;
+  }
+
+  // SQL block (shown by default)
+  if (data.sql) {
+    html += `<div class="sqlbar">
+      <button class="mini toggle-sql">{ } hide sql</button>
+      <button class="mini copy-sql">⧉ copy sql</button>
+    </div>
+    <div class="sqlbox"><pre>${esc(data.sql)}</pre></div>`;
+  }
+
+  // results table
+  if (data.columns && data.columns.length) {
+    html += `<div class="tablewrap"><table>
+      <thead><tr>${data.columns.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead>
+      <tbody>${data.rows.map(row=>`<tr>${row.map(v=>{
+        const num = typeof v === 'number';
+        return `<td class="${num?'num':''}">${v===null?'<span class="nul">∅</span>':esc(v)}</td>`;
+      }).join('')}</tr>`).join('')}</tbody>
+    </table></div>`;
+    if (data.truncated) html += `<div class="trunc">⚠ Result capped at row limit — refine your query for the full picture.</div>`;
+  }
+
+  card.innerHTML = html;
+
+  // wire SQL toggle
+  const sqlbox = card.querySelector('.sqlbox');
+  card.querySelector('.toggle-sql')?.addEventListener('click', e => {
+    sqlbox.classList.toggle('show');
+    e.target.textContent = sqlbox.classList.contains('show') ? '{ } hide sql' : '{ } show sql';
+  });
+  card.querySelector('.copy-sql')?.addEventListener('click', e => {
+    navigator.clipboard?.writeText(data.sql).then(() => {
+      e.target.textContent = '✓ copied';
+      setTimeout(() => { e.target.textContent = '⧉ copy sql'; }, 1400);
+    });
+  });
+}
+
+function addError(msg) {
+  const d = document.createElement('div');
+  d.className = 'msg bot';
+  d.innerHTML = `<span class="who">Talk-to-DB</span>
+    <div class="errcard"><b>⊘ Request failed</b>${esc(msg)}</div>`;
+  stream.appendChild(d);
+  scroll();
+}
+
+function scroll() { stream.scrollTop = stream.scrollHeight; }
+
+/* ── send with SSE streaming ── */
+async function send(text) {
+  const question = (text ?? qEl.value).trim();
+  if (!question || askBtn.disabled) return;
+  qEl.value = '';
+  qEl.style.height = '';
+
+  addUser(question);
+  askBtn.disabled = true;
+
+  const card = addBotShell();
+
+  // thinking bar + live steps container
+  const thinkBar = makeThinkingBar('connecting to agent…');
+  const stepsEl = document.createElement('div');
+  stepsEl.className = 'live-steps';
+  card.appendChild(thinkBar);
+  card.appendChild(stepsEl);
+  scroll();
+
+  let finalData = null;
+  let fatalError = null;
+
+  try {
+    const resp = await api.askStream(question, history.slice(-12));
+    if (!resp.ok) {
+      const body = await resp.json().catch(() => ({}));
+      throw new Error(body.detail || resp.statusText);
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, {stream: true});
+
+      // parse SSE frames from buffer
+      const frames = buf.split('\n\n');
+      buf = frames.pop(); // last may be incomplete
+
+      for (const frame of frames) {
+        let eventType = 'message';
+        let dataLine = '';
+        for (const line of frame.split('\n')) {
+          if (line.startsWith('event: ')) eventType = line.slice(7).trim();
+          if (line.startsWith('data: '))  dataLine  = line.slice(6).trim();
+        }
+        if (!dataLine) continue;
+        let data;
+        try { data = JSON.parse(dataLine); } catch { continue; }
+
+        if (eventType === 'thinking') {
+          thinkBar.querySelector('.thinking-label').textContent =
+            `turn ${data.turn} — ${data.status}`;
+          scroll();
+        } else if (eventType === 'sql') {
+          stepsEl.appendChild(makeLiveStep('sql', data.sql, `${data.rows} rows · ${data.elapsed_ms}ms`));
+          scroll();
+        } else if (eventType === 'blocked') {
+          stepsEl.appendChild(makeLiveStep('blocked', data.sql, data.reason));
+          scroll();
+        } else if (eventType === 'error') {
+          stepsEl.appendChild(makeLiveStep('error', data.sql, data.detail));
+          scroll();
+        } else if (eventType === 'done') {
+          finalData = data;
+        } else if (eventType === 'err') {
+          fatalError = data.detail || 'Unknown agent error';
+        }
+      }
+    }
+  } catch(e) {
+    fatalError = e.message;
+  }
+
+  // replace live view with final card or error
+  if (fatalError) {
+    card.innerHTML = '';
+    card.innerHTML = `<div class="errcard"><b>⊘ Request failed</b>${esc(fatalError)}</div>`;
+  } else if (finalData) {
+    renderFinalCard(card, finalData);
+    history.push(
+      {role: 'user', content: question},
+      {role: 'assistant', content: finalData.answer}
+    );
+  } else {
+    card.innerHTML = `<div class="answer">No response received.</div>`;
+  }
+
+  scroll();
+  askBtn.disabled = false;
+  qEl.focus();
+}
+
+/* ── input events ── */
+askBtn.addEventListener('click', () => send());
+qEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+// auto-grow textarea
+qEl.addEventListener('input', () => {
+  qEl.style.height = '';
+  qEl.style.height = Math.min(qEl.scrollHeight, 160) + 'px';
+});
+$('#sugg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-q]');
+  if (b) send(b.dataset.q);
+});
+
+boot();
+</script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+# secrets — never commit real credentials
+config.yaml
+data/audit.log
+*.log
+
+# python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+.env
+
+# test / build artefacts
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+*.egg-info/
+
+# data — demo.db is committed; personal DBs are not
+data/*.db
+!data/demo.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
