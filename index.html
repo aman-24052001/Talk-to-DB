@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Talk-to-DB — Live Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F0EDE3;--ink:#111111;--card:#FFFFFF;
+  --yellow:#FFCF00;--pink:#FF90E8;--blue:#2F6BFF;
+  --green:#00C16A;--red:#FF4D26;--orange:#FF8C00;--purple:#7C3AED;
+  --bw:3px;--sh:6px 6px 0 var(--ink);--sh-sm:4px 4px 0 var(--ink);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Space Grotesk',sans-serif;background:var(--paper);color:var(--ink);
+  background-image:radial-gradient(rgba(17,17,17,.09) 1.2px,transparent 1.2px);
+  background-size:26px 26px;
+}
+::selection{background:var(--yellow)}
+
+/* NAV */
+nav{
+  display:flex;align-items:center;gap:14px;padding:14px 28px;
+  border-bottom:var(--bw) solid var(--ink);background:var(--paper);
+  position:sticky;top:0;z-index:100;flex-wrap:wrap;
+}
+.logo-mark{
+  width:42px;height:42px;background:var(--yellow);border:var(--bw) solid var(--ink);
+  box-shadow:var(--sh-sm);display:grid;place-items:center;
+  font-family:'Archivo Black';font-size:12px;transform:rotate(-4deg);flex-shrink:0;
+}
+.logo-text{font-family:'Archivo Black';font-size:19px}
+.logo-text em{font-style:normal;background:var(--ink);color:var(--yellow);padding:0 5px;margin-left:3px}
+.nav-sp{flex:1}
+.nav-links{display:flex;gap:8px;flex-wrap:wrap}
+.npill{
+  font-family:'JetBrains Mono';font-size:11px;font-weight:700;letter-spacing:.5px;
+  border:2px solid var(--ink);padding:5px 11px;background:var(--card);
+  box-shadow:3px 3px 0 var(--ink);text-decoration:none;color:var(--ink);
+  transition:transform .05s,box-shadow .05s;text-transform:uppercase;
+}
+.npill:hover{background:var(--yellow)}
+.npill:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
+.npill.cta{background:var(--ink);color:var(--yellow)}
+.npill.cta:hover{background:#222}
+
+/* HERO */
+.hero{
+  min-height:92vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:64px 24px 40px;gap:28px;
+  border-bottom:var(--bw) solid var(--ink);
+}
+.kicker{
+  font-family:'JetBrains Mono';font-size:11px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;border:2px solid var(--ink);padding:5px 14px;
+  background:var(--green);color:#fff;display:inline-block;
+}
+h1{
+  font-family:'Archivo Black';font-size:clamp(40px,8vw,94px);
+  line-height:.94;letter-spacing:-2px;max-width:860px;
+}
+h1 .y{
+  display:inline-block;background:var(--yellow);padding:0 10px;
+  border:var(--bw) solid var(--ink);box-shadow:var(--sh);transform:rotate(-1.5deg);
+}
+h1 .p{
+  display:inline-block;background:var(--pink);padding:0 10px;
+  border:var(--bw) solid var(--ink);box-shadow:var(--sh);transform:rotate(1deg);
+}
+.sub{font-size:17px;line-height:1.65;max-width:540px;opacity:.8}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.btn{
+  font-family:'Archivo Black';font-size:17px;border:var(--bw) solid var(--ink);
+  padding:13px 26px;box-shadow:var(--sh);text-decoration:none;
+  transition:transform .05s,box-shadow .05s;display:inline-block;
+}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:8px 8px 0 var(--ink)}
+.btn.dark{background:var(--ink);color:var(--yellow)}
+.btn.light{background:var(--yellow);color:var(--ink)}
+
+.stats{display:flex;border:var(--bw) solid var(--ink);background:var(--card);box-shadow:var(--sh)}
+.stat{padding:16px 24px;text-align:center;border-right:2px solid var(--ink)}
+.stat:last-child{border-right:none}
+.stat-n{font-family:'Archivo Black';font-size:26px}
+.stat-l{font-family:'JetBrains Mono';font-size:10px;letter-spacing:.5px;opacity:.55;text-transform:uppercase;margin-top:2px}
+
+/* SECTIONS */
+.section{padding:64px 28px;border-bottom:var(--bw) solid var(--ink)}
+.wrap{max-width:1100px;margin:0 auto}
+.eyebrow{font-family:'JetBrains Mono';font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:.45;margin-bottom:6px}
+h2{font-family:'Archivo Black';font-size:clamp(26px,4vw,46px);line-height:1.05;margin-bottom:14px}
+.lead{font-size:15px;line-height:1.65;opacity:.72;max-width:580px;margin-bottom:36px}
+
+/* HOW IT WORKS */
+.steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));border:var(--bw) solid var(--ink);box-shadow:var(--sh)}
+.step{padding:22px;border-right:2px solid var(--ink);background:var(--card)}
+.step:last-child{border-right:none}
+.step-n{font-family:'Archivo Black';font-size:44px;color:rgba(17,17,17,.07);line-height:1;margin-bottom:6px}
+.step-t{font-family:'Archivo Black';font-size:14px;margin-bottom:5px}
+.step-b{font-size:13px;line-height:1.6;opacity:.68}
+
+/* CONVERSATIONS */
+.convos{display:flex;flex-direction:column;gap:44px}
+.convo{border:var(--bw) solid var(--ink);background:var(--card);box-shadow:var(--sh);overflow:hidden}
+.convo-hdr{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:11px 18px;background:var(--ink);color:var(--yellow);
+  font-family:'JetBrains Mono';font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+}
+.tag{padding:2px 7px;font-size:10px;border:1.5px solid rgba(255,255,255,.3)}
+.tag.basic{background:var(--green);color:#fff;border-color:transparent}
+.tag.hard{background:var(--red);color:#fff;border-color:transparent}
+.tag.multi{background:var(--purple);color:#fff;border-color:transparent}
+.tag.guard{background:var(--orange);color:#fff;border-color:transparent}
+.tag.ops{background:var(--blue);color:#fff;border-color:transparent}
+
+.msg-u{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:14px 18px;background:var(--yellow);border-bottom:2px solid var(--ink);
+}
+.who{font-family:'JetBrains Mono';font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;opacity:.55;white-space:nowrap;padding-top:2px;flex-shrink:0}
+.msg-t{font-size:15px;line-height:1.55;font-weight:500}
+.msg-b{border-bottom:2px solid var(--ink)}
+.msg-b:last-child{border-bottom:none}
+
+/* live steps */
+.lsteps{padding:10px 18px;display:flex;flex-direction:column;gap:5px;border-bottom:2px solid var(--ink);background:#FAFAF5}
+.ls{font-family:'JetBrains Mono';font-size:11px;padding:5px 9px;border:1.5px solid var(--ink);display:flex;align-items:center;gap:7px}
+.ls.thinking{background:#F0F4FF;border-color:var(--blue)}
+.ls.sql{background:#EFFFED;border-color:var(--green)}
+.ls.blk{background:#FFF1EC;border-color:var(--red)}
+.ls-sql{font-size:10px;opacity:.6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:380px}
+
+/* answer */
+.answer{padding:15px 18px;font-size:15px;line-height:1.6;border-bottom:2px solid var(--ink)}
+
+/* stamps */
+.stamps{display:flex;flex-wrap:wrap;gap:5px;padding:9px 18px;background:#FAFAF5;border-bottom:2px solid var(--ink)}
+.stamp{font-family:'JetBrains Mono';font-size:10px;font-weight:700;letter-spacing:.3px;border:2px solid var(--ink);padding:3px 7px;text-transform:uppercase}
+.stamp.ok{background:var(--green);color:#fff}
+.stamp.blk{background:var(--red);color:#fff}
+.stamp.warn{background:var(--yellow)}
+.stamp.meta{background:var(--card)}
+
+/* blocked card */
+.blk-wrap{padding:12px 18px;background:#FFF5F2;border-bottom:2px solid var(--ink)}
+.blk-card{border:2px solid var(--red);box-shadow:3px 3px 0 var(--red)}
+.blk-head{background:var(--red);color:#fff;font-family:'Archivo Black';font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:5px 10px;border-bottom:2px solid var(--ink)}
+.blk-sql{font-family:'JetBrains Mono';font-size:11px;padding:8px 10px;color:#c0392b;border-bottom:1px solid rgba(0,0,0,.1)}
+.blk-reason{font-family:'JetBrains Mono';font-size:10px;padding:5px 10px;opacity:.65}
+
+/* sql block */
+.sqlwrap{background:#1a1a2e;border-bottom:2px solid var(--ink);padding:14px 18px}
+.sql-lbl{font-family:'JetBrains Mono';font-size:9px;font-weight:700;letter-spacing:1.5px;color:#555;text-transform:uppercase;margin-bottom:7px}
+.sql-code{font-family:'JetBrains Mono';font-size:12.5px;color:#d0d0ff;line-height:1.65;white-space:pre}
+
+/* table */
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-family:'JetBrains Mono';font-size:12px}
+th{padding:8px 13px;background:var(--ink);color:#fff;text-align:left;white-space:nowrap;font-size:11px;letter-spacing:.3px}
+td{padding:7px 13px;border-bottom:1.5px solid rgba(17,17,17,.1);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:nth-child(even) td{background:#FAFAF5}
+td.n{text-align:right;font-weight:700}
+.trunc{font-family:'JetBrains Mono';font-size:11px;padding:7px 13px;background:var(--yellow);border-top:2px solid var(--ink)}
+
+/* GUARDRAILS */
+.guard-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));border:var(--bw) solid var(--ink);box-shadow:var(--sh)}
+.gc{padding:18px;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);background:var(--card)}
+.gc-head{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.gc-icon{width:34px;height:34px;border:2px solid var(--ink);display:grid;place-items:center;font-size:15px;background:var(--paper);flex-shrink:0}
+.gc-name{font-family:'Archivo Black';font-size:13px}
+.gc-sql{font-family:'JetBrains Mono';font-size:11px;background:#1a1a2e;color:#ff9999;padding:7px 9px;margin-bottom:7px;border:1.5px solid var(--ink)}
+.gc-res{font-family:'JetBrains Mono';font-size:10px;color:var(--red);font-weight:700}
+
+/* SCHEMA */
+.schema-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.sc{border:var(--bw) solid var(--ink);background:var(--card);box-shadow:var(--sh-sm)}
+.sc-head{background:var(--ink);color:var(--yellow);padding:8px 11px;font-family:'Archivo Black';font-size:12px;letter-spacing:.4px}
+.sc-cols{font-family:'JetBrains Mono';font-size:10px;padding:4px 2px;background:#1a1a2e}
+.sc-cols span{display:block;padding:3px 9px;color:#aaa}
+.sc-cols .pk{color:var(--yellow)}
+.sc-cols .fk{color:#88aaff}
+.sc-note{font-family:'JetBrains Mono';font-size:10px;padding:6px 11px;opacity:.55;border-top:2px solid var(--ink)}
+
+/* FOOTER */
+footer{
+  border-top:var(--bw) solid var(--ink);padding:28px 28px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;
+}
+.fl{font-family:'Archivo Black';font-size:18px}
+.fl em{font-style:normal;background:var(--ink);color:var(--yellow);padding:0 4px}
+.flinks{display:flex;gap:14px}
+.flink{font-family:'JetBrains Mono';font-size:11px;color:var(--ink);text-decoration:none;border-bottom:2px solid transparent}
+.flink:hover{border-bottom-color:var(--ink)}
+.fn{font-family:'JetBrains Mono';font-size:10px;opacity:.45}
+
+@media(max-width:700px){
+  nav{padding:10px 14px}
+  .hero{padding:44px 16px 32px}
+  h1{letter-spacing:-1px}
+  .stats{flex-wrap:wrap}
+  .stat{border-right:none;border-bottom:2px solid var(--ink)}
+  .section{padding:44px 16px}
+  .step{border-right:none;border-bottom:2px solid var(--ink)}
+  .step:last-child{border-bottom:none}
+  .ls-sql{max-width:180px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo-mark">T→DB</div>
+  <span class="logo-text">TALK-TO<em>DB</em></span>
+  <div class="nav-sp"></div>
+  <div class="nav-links">
+    <a href="#demo" class="npill">Demo</a>
+    <a href="#security" class="npill">Security</a>
+    <a href="#schema" class="npill">Schema</a>
+    <a href="https://github.com/aman-24052001/Talk-to-DB" class="npill cta" target="_blank">GitHub →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <span class="kicker">v3 · Demo Showcase</span>
+  <h1>Ask your<br>database<br><span class="y">anything.</span></h1>
+  <p class="sub">Plain English in. Guarded SQL out. Real answers — always with the exact query that ran, every guardrail stamp, and every agent step visible.</p>
+  <div class="hero-cta">
+    <a href="#demo" class="btn dark">See 9 live demos ↓</a>
+    <a href="https://github.com/aman-24052001/Talk-to-DB" class="btn light" target="_blank">GitHub</a>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-n">5</div><div class="stat-l">Tables</div></div>
+    <div class="stat"><div class="stat-n">4,091</div><div class="stat-l">Total rows</div></div>
+    <div class="stat"><div class="stat-n">2</div><div class="stat-l">Firewall layers</div></div>
+    <div class="stat"><div class="stat-n">36</div><div class="stat-l">Tests passing</div></div>
+    <div class="stat"><div class="stat-n">0</div><div class="stat-l">Write access</div></div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="section">
+<div class="wrap">
+  <div class="eyebrow">How it works</div>
+  <h2>Question → guarded SQL → answer</h2>
+  <div class="steps">
+    <div class="step"><div class="step-n">01</div><div class="step-t">You ask</div><div class="step-b">Plain English. No SQL. Multi-turn conversation keeps context across questions.</div></div>
+    <div class="step"><div class="step-n">02</div><div class="step-t">Claude writes SQL</div><div class="step-b">Live schema + 7 few-shot examples guide the agent to the correct join paths and formulas.</div></div>
+    <div class="step"><div class="step-n">03</div><div class="step-t">AST firewall</div><div class="step-b">sqlglot parses every statement. Single SELECT? No forbidden nodes? Tables in schema? LIMIT enforced?</div></div>
+    <div class="step"><div class="step-n">04</div><div class="step-t">Read-only session</div><div class="step-b">Even if something passes the AST, the DB session is physically read-only at the driver level.</div></div>
+    <div class="step"><div class="step-n">05</div><div class="step-t">You see everything</div><div class="step-b">Answer, exact SQL, row count, guardrail stamps, agent turns, elapsed time. Full transparency.</div></div>
+    <div class="step"><div class="step-n">06</div><div class="step-t">SSE streaming</div><div class="step-b">Real-time events per agent step — thinking, SQL attempt, firewall result — no silent waiting.</div></div>
+  </div>
+</div>
+</div>
+
+<!-- DEMO CONVERSATIONS -->
+<div class="section" id="demo">
+<div class="wrap">
+  <div class="eyebrow">Demo conversations</div>
+  <h2>9 real questions. Real data. Real SQL.</h2>
+  <p class="lead">Every number below came from an actual query against the demo database. Nothing is mocked.</p>
+
+  <div class="convos">
+
+    <!-- 1 -->
+    <div class="convo">
+      <div class="convo-hdr"><span>Demo 1 — Simple Aggregate</span><span class="tag basic">Basic</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">What is the total revenue from completed orders?</span></div>
+      <div class="msg-b">
+        <div class="lsteps">
+          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
+          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT ROUND(SUM(oi.quantity * oi.unit_price), 2) AS total_revenue FROM order_items oi JOIN orders o…</span></div>
+        </div>
+        <div class="answer">Total revenue from completed orders is <strong>₹30,06,110.00</strong>.</div>
+        <div class="stamps">
+          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
+          <span class="stamp meta">1 row</span><span class="stamp meta">1 turn</span><span class="stamp meta">42ms</span>
+        </div>
+        <div class="sqlwrap">
+          <div class="sql-lbl">SQL executed</div>
+          <div class="sql-code">SELECT ROUND(SUM(oi.quantity * oi.unit_price), 2) AS total_revenue
+FROM order_items oi
+JOIN orders o ON oi.order_id = o.order_id
+WHERE o.status = 'completed'
+LIMIT 200</div>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>total_revenue</th></tr></thead>
+          <tbody><tr><td class="n">3006110.0</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 2 -->
+    <div class="convo">
+      <div class="convo-hdr"><span>Demo 2 — Revenue by Brand (Ranked)</span><span class="tag hard">3-table JOIN</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">Which brands are generating the most revenue from completed orders? Rank all of them.</span></div>
+      <div class="msg-b">
+        <div class="lsteps">
+          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
+          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT t.brand, ROUND(SUM(oi.quantity * oi.unit_price),2) AS revenue FROM order_items oi JOIN orders o JOIN t_shirts t…</span></div>
+        </div>
+        <div class="answer">Van Heusen leads with <strong>₹8,59,065</strong>, followed by Adidas (₹6,38,620) and Puma (₹6,19,353). Nike and Levi round out the ranking.</div>
+        <div class="stamps">
+          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
+          <span class="stamp meta">5 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">38ms</span>
+        </div>
+        <div class="sqlwrap">
+          <div class="sql-lbl">SQL executed</div>
+          <div class="sql-code">SELECT t.brand,
+       ROUND(SUM(oi.quantity * oi.unit_price), 2) AS revenue
+FROM order_items oi
+JOIN orders   o ON oi.order_id   = o.order_id
+JOIN t_shirts t ON oi.t_shirt_id = t.t_shirt_id
+WHERE o.status = 'completed'
+GROUP BY t.brand
+ORDER BY revenue DESC
+LIMIT 200</div>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>brand</th><th>revenue</th></tr></thead>
+          <tbody>
+            <tr><td>Van Heusen</td><td class="n">859065.0</td></tr>
+            <tr><td>Adidas</td><td class="n">638620.0</td></tr>
+            <tr><td>Puma</td><td class="n">619353.0</td></tr>
+            <tr><td>Nike</td><td class="n">524439.0</td></tr>
+            <tr><td>Levi</td><td class="n">364633.0</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 3 -->
+    <div class="convo">
+      <div class="convo-hdr"><span>Demo 3 — Monthly Revenue 2025</span><span class="tag hard">Date handling</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">Show me monthly revenue and order count for all of 2025.</span></div>
+      <div class="msg-b">
+        <div class="lsteps">
+          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
+          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT strftime('%Y-%m', o.order_date) AS month, ROUND(SUM(oi.quantity*oi.unit_price),2) AS revenue…</span></div>
+        </div>
+        <div class="answer">Revenue grew consistently through 2025, peaking in <strong>July at ₹2,84,268</strong> across 101 orders. December was the highest month by year-end at ₹3,31,791.</div>
+        <div class="stamps">
+          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
+          <span class="stamp meta">12 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">51ms</span>
+        </div>
+        <div class="sqlwrap">
+          <div class="sql-lbl">SQL executed</div>
+          <div class="sql-code">SELECT strftime('%Y-%m', o.order_date) AS month,
+       ROUND(SUM(oi.quantity * oi.unit_price), 2) AS revenue,
+       COUNT(DISTINCT o.order_id) AS orders
+FROM orders      o
+JOIN order_items oi ON oi.order_id = o.order_id
+WHERE o.status = 'completed'
+  AND o.order_date BETWEEN '2025-01-01' AND '2025-12-31'
+GROUP BY month
+ORDER BY month
+LIMIT 200</div>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>month</th><th>revenue</th><th>orders</th></tr></thead>
+          <tbody>
+            <tr><td>2025-01</td><td class="n">10183.0</td><td class="n">5</td></tr>
+            <tr><td>2025-02</td><td class="n">39439.0</td><td class="n">22</td></tr>
+            <tr><td>2025-03</td><td class="n">35947.0</td><td class="n">15</td></tr>
+            <tr><td>2025-04</td><td class="n">92551.0</td><td class="n">47</td></tr>
+            <tr><td>2025-05</td><td class="n">117309.0</td><td class="n">52</td></tr>
+            <tr><td>2025-06</td><td class="n">134971.0</td><td class="n">56</td></tr>
+            <tr><td>2025-07</td><td class="n">284268.0</td><td class="n">101</td></tr>
+            <tr><td>2025-08</td><td class="n">168032.0</td><td class="n">77</td></tr>
+            <tr><td>2025-09</td><td class="n">212876.0</td><td class="n">95</td></tr>
+            <tr><td>2025-10</td><td class="n">248800.0</td><td class="n">106</td></tr>
+            <tr><td>2025-11</td><td class="n">266560.0</td><td class="n">109</td></tr>
+            <tr><td>2025-12</td><td class="n">331791.0</td><td class="n">148</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 4 -->
+    <div class="convo">
+      <div class="convo-hdr"><span>Demo 4 — Discounted Stock Value</span><span class="tag hard">LEFT JOIN + COALESCE</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">What is the total stock value of each brand after applying their discounts?</span></div>
+      <div class="msg-b">
+        <div class="lsteps">
+          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
+          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT t.brand, ROUND(SUM(t.price*(1-COALESCE(d.pct_discount,0)/100)*t.stock_quantity),2)…</span></div>
+        </div>
+        <div class="answer">Adidas holds the highest discounted stock value at <strong>₹6,94,394</strong>. Nike is lowest at ₹4,78,471. Note: only 29 of 89 shirts carry a discount (averaging 14.1%), so most use COALESCE to default to 0%.</div>
+        <div class="stamps">
+          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
+          <span class="stamp meta">5 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">29ms</span>
+        </div>
+        <div class="sqlwrap">
+          <div class="sql-lbl">SQL executed</div>
+          <div class="sql-code">SELECT t.brand,
+       ROUND(
+         SUM(t.price * (1 - COALESCE(d.pct_discount, 0) / 100) * t.stock_quantity),
+         2
+       ) AS discounted_stock_value
+FROM t_shirts  t
+LEFT JOIN discounts d ON t.t_shirt_id = d.t_shirt_id
+GROUP BY t.brand
+ORDER BY discounted_stock_value DESC
+LIMIT 200</div>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>brand</th><th>discounted_stock_value</th></tr></thead>
+          <tbody>
+            <tr><td>Adidas</td><td class="n">694393.9</td></tr>
+            <tr><td>Puma</td><td class="n">626331.4</td></tr>
+            <tr><td>Van Heusen</td><td class="n">616120.1</td></tr>
+            <tr><td>Levi</td><td class="n">493588.35</td></tr>
+            <tr><td>Nike</td><td class="n">478470.55</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 5 -->
+    <div class="convo">
+      <div class="convo-hdr"><span>Demo 5 — Top Customers by Spend</span><span class="tag hard">4-table JOIN</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">Who are our top 5 customers by total spend on completed orders? Include their city.</span></div>
+      <div class="msg-b">
+        <div class="lsteps">
+          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
+          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT c.name, c.city, ROUND(SUM(oi.quantity*oi.unit_price),2) AS total_spend FROM customers c JOIN orders o JOIN order_items…</span></div>
+        </div>
+        <div class="answer">Anita Nair from Mumbai leads with <strong>₹35,645</strong>, followed by Priya Patel (Chennai ₹34,654) and Pooja Patel (Hyderabad ₹32,651).</div>
+        <div class="stamps">
+          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
+          <span class="stamp meta">5 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">44ms</span>
+        </div>
+        <div class="sqlwrap">
+          <div class="sql-lbl">SQL executed</div>
+          <div class="sql-code">SELECT c.name, c.city,
+       ROUND(SUM(oi.quantity * oi.unit_price), 2) AS total_spend
+FROM customers   c
+JOIN orders      o  ON o.customer_id  = c.customer_id
+JOIN order_items oi ON oi.order_id    = o.order_id
+WHERE o.status = 'completed'
+GROUP BY c.customer_id, c.name, c.city
+ORDER BY total_spend DESC
+LIMIT 5</div>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>name</th><th>city</th><th>total_spend</th></tr></thead>
+          <tbody>
+            <tr><td>Anita Nair</td><td>Mumbai</td><td class="n">35645.0</td></tr>
+            <tr><td>Priya Patel</td><td>Chennai</td><td class="n">34654.0</td></tr>
+            <tr><td>Pooja Patel</td><td>Hyderabad</td><td class="n">32651.0</td></tr>
+            <tr><td>Kavya Reddy</td><td>Bengaluru</td><td class="n">30862.0</td></tr>
+            <tr><td>Karan Verma</td><td>Mumbai</td><td class="n">28857.0</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 6 -->
+    <div class="convo">
+      <div class="convo-hdr"><span>Demo 6 — Quarter Comparison</span><span class="tag hard">CASE WHEN + date ranges</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">Compare Q4 2025 vs Q1 2026 — orders and revenue side by side.</span></div>
+      <div class="msg-b">
+        <div class="lsteps">
+          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
+          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT CASE WHEN o.order_date BETWEEN '2025-10-01' AND '2025-12-31' THEN 'Q4-2025'…</span></div>
+        </div>
+        <div class="answer">Q4 2025 had higher revenue (<strong>₹8,47,151</strong>) while Q1 2026 had more orders (371 vs 363). Average order value was slightly lower in Q1 2026.</div>
+        <div class="stamps">
+          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
+          <span class="stamp meta">2 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">33ms</span>
+        </div>
+        <div class="sqlwrap">
+          <div class="sql-lbl">SQL executed</div>
+          <div class="sql-code">SELECT
+  CASE
+    WHEN o.order_date BETWEEN '2025-10-01' AND '2025-12-31' THEN 'Q4-2025'
+    WHEN o.order_date BETWEEN '2026-01-01' AND '2026-03-31' THEN 'Q1-2026'
+  END AS quarter,
+  COUNT(DISTINCT o.order_id) AS orders,
+  ROUND(SUM(oi.quantity * oi.unit_price), 2) AS revenue
+FROM orders      o
+JOIN order_items oi ON oi.order_id = o.order_id
+WHERE o.status = 'completed'
+  AND o.order_date BETWEEN '2025-10-01' AND '2026-03-31'
+GROUP BY quarter
+ORDER BY quarter
+LIMIT 200</div>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>quarter</th><th>orders</th><th>revenue</th></tr></thead>
+          <tbody>
+            <tr><td>Q1-2026</td><td class="n">371</td><td class="n">825663.0</td></tr>
+            <tr><td>Q4-2025</td><td class="n">363</td><td class="n">847151.0</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 7 -->
+    <div class="convo">
+      <div class="convo-hdr"><span>Demo 7 — Agent Self-Corrects After Block</span><span class="tag multi">2 turns · auto-retry</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">What are the top 5 best-selling sizes by units sold across completed orders?</span></div>
+      <div class="msg-b">
+        <div class="lsteps">
+          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
+          <div class="ls blk">⊘ &nbsp;blocked — SELECT INTO not permitted (tried to write temp table)</div>
+          <div class="ls thinking">◌ &nbsp;turn 2 — reads rejection reason, rewrites query…</div>
+          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT t.size, SUM(oi.quantity) AS units_sold FROM order_items oi JOIN t_shirts t JOIN orders o…</span></div>
+        </div>
+        <div class="answer">XS is the best seller at <strong>1,103 units</strong>, followed by S (1,033) and XL (963). M is the slowest at 838 units.</div>
+        <div class="stamps">
+          <span class="stamp ok">✓ firewall pass</span>
+          <span class="stamp blk">⊘ 1 blocked</span>
+          <span class="stamp ok">⛨ read-only</span>
+          <span class="stamp meta">5 rows</span><span class="stamp meta">2 turns</span><span class="stamp meta">3.2s</span>
+        </div>
+        <div class="blk-wrap">
+          <div class="blk-card">
+            <div class="blk-head">⊘ Turn 1 — blocked by AST firewall</div>
+            <div class="blk-sql">SELECT t.size, SUM(oi.quantity) AS units INTO #temp FROM …</div>
+            <div class="blk-reason">Forbidden operation in query: Into. Only pure read-only SELECTs permitted. → Agent retried.</div>
+          </div>
+        </div>
+        <div class="sqlwrap">
+          <div class="sql-lbl">SQL executed (turn 2 — self-corrected)</div>
+          <div class="sql-code">SELECT t.size,
+       SUM(oi.quantity) AS units_sold
+FROM order_items oi
+JOIN t_shirts    t ON oi.t_shirt_id = t.t_shirt_id
+JOIN orders      o ON oi.order_id   = o.order_id
+WHERE o.status = 'completed'
+GROUP BY t.size
+ORDER BY units_sold DESC
+LIMIT 5</div>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>size</th><th>units_sold</th></tr></thead>
+          <tbody>
+            <tr><td>XS</td><td class="n">1103</td></tr>
+            <tr><td>S</td><td class="n">1033</td></tr>
+            <tr><td>XL</td><td class="n">963</td></tr>
+            <tr><td>L</td><td class="n">853</td></tr>
+            <tr><td>M</td><td class="n">838</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- 8 -->
+    <div class="convo">
+      <div class="convo-hdr"><span>Demo 8 — Write Attempt + Recovery</span><span class="tag guard">Security demo</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">Delete all cancelled orders from the database.</span></div>
+      <div class="msg-b">
+        <div class="lsteps">
+          <div class="ls thinking">◌ &nbsp;turn 1 — calling model (sees system prompt: read-only)…</div>
+        </div>
+        <div class="answer">I can't do that — this connection is strictly read-only. DELETE, INSERT, UPDATE, and all DDL are blocked by the SQL firewall before they reach the database. I can show you the cancelled orders if that helps.</div>
+        <div class="stamps">
+          <span class="stamp ok">✓ no tool call made</span>
+          <span class="stamp ok">⛨ read-only</span>
+          <span class="stamp meta">1 turn</span><span class="stamp meta">890ms</span>
+        </div>
+      </div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">OK, show me the cancelled orders breakdown by month then.</span></div>
+      <div class="msg-b">
+        <div class="lsteps">
+          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
+          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT strftime('%Y-%m', order_date) AS month, COUNT(*) AS cancelled FROM orders WHERE status='cancelled'…</span></div>
+        </div>
+        <div class="answer">There are <strong>78 cancelled orders</strong> total. August 2025 had the most (9). Most months averaged 2–3.</div>
+        <div class="stamps">
+          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
+          <span class="stamp meta">12 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">37ms</span>
+        </div>
+        <div class="sqlwrap">
+          <div class="sql-lbl">SQL executed</div>
+          <div class="sql-code">SELECT strftime('%Y-%m', order_date) AS month,
+       COUNT(*) AS cancelled
+FROM orders
+WHERE status = 'cancelled'
+GROUP BY month
+ORDER BY month
+LIMIT 200</div>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>month</th><th>cancelled</th></tr></thead>
+          <tbody>
+            <tr><td>2025-01</td><td class="n">1</td></tr>
+            <tr><td>2025-02</td><td class="n">2</td></tr>
+            <tr><td>2025-03</td><td class="n">3</td></tr>
+            <tr><td>2025-04</td><td class="n">2</td></tr>
+            <tr><td>2025-05</td><td class="n">2</td></tr>
+            <tr><td>2025-06</td><td class="n">2</td></tr>
+            <tr><td>2025-07</td><td class="n">2</td></tr>
+            <tr><td>2025-08</td><td class="n">9</td></tr>
+          </tbody>
+        </table><div class="trunc">+ 4 more months not shown</div></div>
+      </div>
+    </div>
+
+    <!-- 9 -->
+    <div class="convo">
+      <div class="convo-hdr"><span>Demo 9 — Low Stock Alert</span><span class="tag ops">Ops query</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">Which t-shirts are critically low on stock — under 10 units? I need to reorder.</span></div>
+      <div class="msg-b">
+        <div class="lsteps">
+          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
+          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT brand, color, size, stock_quantity, price FROM t_shirts WHERE stock_quantity &lt; 10 ORDER BY stock_quantity…</span></div>
+        </div>
+        <div class="answer"><strong>5 SKUs</strong> are critically low. Levi Blue XL and Van Heusen Blue XS are most urgent at just 5 units each. Nike White XL (₹299) is the cheapest item at risk.</div>
+        <div class="stamps">
+          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
+          <span class="stamp meta">5 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">22ms</span>
+        </div>
+        <div class="sqlwrap">
+          <div class="sql-lbl">SQL executed</div>
+          <div class="sql-code">SELECT brand, color, size, stock_quantity, price
+FROM t_shirts
+WHERE stock_quantity &lt; 10
+ORDER BY stock_quantity
+LIMIT 200</div>
+        </div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>brand</th><th>color</th><th>size</th><th>stock_qty</th><th>price</th></tr></thead>
+          <tbody>
+            <tr><td>Levi</td><td>Blue</td><td>XL</td><td class="n">5</td><td class="n">799.0</td></tr>
+            <tr><td>Van Heusen</td><td>Blue</td><td>XS</td><td class="n">5</td><td class="n">399.0</td></tr>
+            <tr><td>Puma</td><td>Blue</td><td>XS</td><td class="n">5</td><td class="n">599.0</td></tr>
+            <tr><td>Levi</td><td>Red</td><td>XS</td><td class="n">7</td><td class="n">599.0</td></tr>
+            <tr><td>Nike</td><td>White</td><td>XL</td><td class="n">8</td><td class="n">299.0</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+  </div><!-- /convos -->
+</div>
+</div>
+
+<!-- SECURITY -->
+<div class="section" id="security">
+<div class="wrap">
+  <div class="eyebrow">Security</div>
+  <h2>The firewall catches everything harmful</h2>
+  <p class="lead">Every statement the LLM produces is parsed to an AST by sqlglot before touching the DB. 10 attack vectors tested and blocked in CI.</p>
+  <div class="guard-grid">
+    <div class="gc"><div class="gc-head"><div class="gc-icon">🗑</div><div class="gc-name">DELETE</div></div><div class="gc-sql">DELETE FROM orders</div><div class="gc-res">⊘ Only SELECT queries are allowed. Got: Delete.</div></div>
+    <div class="gc"><div class="gc-head"><div class="gc-icon">💣</div><div class="gc-name">DROP TABLE</div></div><div class="gc-sql">DROP TABLE t_shirts</div><div class="gc-res">⊘ Only SELECT queries are allowed. Got: Drop.</div></div>
+    <div class="gc"><div class="gc-head"><div class="gc-icon">✏️</div><div class="gc-name">UPDATE</div></div><div class="gc-sql">UPDATE t_shirts SET price=0</div><div class="gc-res">⊘ Only SELECT queries are allowed. Got: Update.</div></div>
+    <div class="gc"><div class="gc-head"><div class="gc-icon">⛓</div><div class="gc-name">Multi-statement</div></div><div class="gc-sql">SELECT 1; DROP TABLE orders</div><div class="gc-res">⊘ Exactly one statement allowed, got 2.</div></div>
+    <div class="gc"><div class="gc-head"><div class="gc-icon">🔌</div><div class="gc-name">load_extension</div></div><div class="gc-sql">SELECT load_extension('evil.so')</div><div class="gc-res">⊘ Function 'load_extension' blocked by policy.</div></div>
+    <div class="gc"><div class="gc-head"><div class="gc-icon">👁</div><div class="gc-name">Schema exfil</div></div><div class="gc-sql">SELECT * FROM sqlite_master</div><div class="gc-res">⊘ Table 'sqlite_master' not in allowed schema.</div></div>
+    <div class="gc"><div class="gc-head"><div class="gc-icon">📋</div><div class="gc-name">SELECT INTO</div></div><div class="gc-sql">SELECT * INTO stolen FROM customers</div><div class="gc-res">⊘ Forbidden operation in query: Into.</div></div>
+    <div class="gc"><div class="gc-head"><div class="gc-icon">🔧</div><div class="gc-name">PRAGMA</div></div><div class="gc-sql">PRAGMA table_info(t_shirts)</div><div class="gc-res">⊘ Only SELECT queries are allowed. Got: Pragma.</div></div>
+    <div class="gc"><div class="gc-head"><div class="gc-icon">😴</div><div class="gc-name">pg_sleep</div></div><div class="gc-sql">SELECT pg_sleep(30)</div><div class="gc-res">⊘ Function 'pg_sleep' blocked by policy.</div></div>
+  </div>
+  <div style="margin-top:20px;padding:14px 18px;border:var(--bw) solid var(--ink);background:var(--card);box-shadow:var(--sh-sm);font-family:'JetBrains Mono';font-size:12px;line-height:1.8">
+    <strong>Layer 2:</strong> Even if something slips the AST, the DB session is physically read-only at the driver level.
+    INSERT/UPDATE/DELETE fail at the connection. 36/36 CI tests verify both layers hold on every push.
+  </div>
+</div>
+</div>
+
+<!-- SCHEMA -->
+<div class="section" id="schema">
+<div class="wrap">
+  <div class="eyebrow">Demo database</div>
+  <h2>What's in the demo DB</h2>
+  <p class="lead">Indian e-commerce t-shirt store. 4,091 rows, 5 tables. Swap in your own DB via one line in config.yaml.</p>
+  <div class="schema-grid">
+    <div class="sc">
+      <div class="sc-head">t_shirts · 89 rows</div>
+      <div class="sc-cols">
+        <span class="pk">t_shirt_id PK</span>
+        <span>brand TEXT</span><span>color TEXT</span>
+        <span>size TEXT</span><span>price REAL</span>
+        <span>stock_quantity INT</span>
+      </div>
+      <div class="sc-note">5 brands · 5 sizes · multiple colors</div>
+    </div>
+    <div class="sc">
+      <div class="sc-head">customers · 200 rows</div>
+      <div class="sc-cols">
+        <span class="pk">customer_id PK</span>
+        <span>name TEXT</span><span>city TEXT</span>
+        <span>signup_date TEXT</span>
+      </div>
+      <div class="sc-note">10 Indian cities</div>
+    </div>
+    <div class="sc">
+      <div class="sc-head">orders · 1,500 rows</div>
+      <div class="sc-cols">
+        <span class="pk">order_id PK</span>
+        <span class="fk">customer_id FK</span>
+        <span>order_date TEXT</span>
+        <span>status TEXT</span>
+      </div>
+      <div class="sc-note">completed / cancelled / returned</div>
+    </div>
+    <div class="sc">
+      <div class="sc-head">order_items · 2,214 rows</div>
+      <div class="sc-cols">
+        <span class="pk">order_item_id PK</span>
+        <span class="fk">order_id FK</span>
+        <span class="fk">t_shirt_id FK</span>
+        <span>quantity INT</span>
+        <span>unit_price REAL</span>
+      </div>
+      <div class="sc-note">revenue lives here</div>
+    </div>
+    <div class="sc">
+      <div class="sc-head">discounts · 29 rows</div>
+      <div class="sc-cols">
+        <span class="pk">discount_id PK</span>
+        <span class="fk">t_shirt_id FK</span>
+        <span>pct_discount REAL</span>
+      </div>
+      <div class="sc-note">29 of 89 shirts · 5–25% off</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="fl">TALK-TO<em>DB</em> <span style="font-family:'JetBrains Mono';font-size:10px;font-weight:400;opacity:.4;margin-left:6px">v3</span></div>
+  <div class="flinks">
+    <a href="https://github.com/aman-24052001/Talk-to-DB" class="flink" target="_blank">GitHub</a>
+    <a href="https://github.com/aman-24052001/Talk-to-DB/blob/main/README.md" class="flink" target="_blank">Docs</a>
+    <a href="https://github.com/aman-24052001/Talk-to-DB/blob/main/ARCHITECTURE.md" class="flink" target="_blank">Architecture</a>
+  </div>
+  <div class="fn">Built by Aman Kumar · MIT License</div>
+</footer>
+
+</body>
+</html>
