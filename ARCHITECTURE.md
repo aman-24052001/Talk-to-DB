@@ -1,4 +1,4 @@
-# Architecture — Talk-to-DB v2
+# Architecture — Talk-to-DB v3
 
 ## Design stance
 
@@ -56,6 +56,12 @@
 | `app/agent/orchestrator.py` | tool-use loop, budgets, self-correction |
 | `app/main.py` | wiring, auth, routes, static UI |
 | `ui/index.html` | neo-brutalist frontend, escapes all DB content |
+
+`POST /api/ask` and `POST /api/ask/stream` share the same `SQLAgent` loop.
+The stream variant (`agent.ask_stream`) yields the same loop's internal
+events (`thinking` / `sql` / `blocked` / `error` / `done`) as Server-Sent
+Events instead of returning one blocking JSON payload, so the UI can render
+agent progress (firewall blocks, retries, SQL attempts) as it happens.
 
 ## Trust boundaries
 

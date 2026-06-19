@@ -1,6 +1,5 @@
 """Hardening tests added in the final pass: cross-dialect escape attempts,
 the rate limiter, credential masking, and demo-data sanity."""
-import re
 import sqlite3
 from pathlib import Path
 

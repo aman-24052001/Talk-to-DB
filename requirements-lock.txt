@@ -1,0 +1,13 @@
+# Exact versions resolved against requirements.txt and verified passing
+# the full test suite (36/36) as of this commit. Use this for reproducible
+# installs; use requirements.txt if you want automatic minor/patch updates.
+#
+#   pip install -r requirements-lock.txt
+#
+anthropic==0.111.0
+fastapi==0.137.2
+uvicorn==0.49.0
+sqlalchemy==2.0.51
+sqlglot==30.11.0
+pydantic==2.13.4
+pyyaml==6.0.3

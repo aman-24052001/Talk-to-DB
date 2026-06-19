@@ -1,13 +1,20 @@
-# Talk-to-DB v2
+# Talk-to-DB v3
+
+[![CI](https://github.com/aman-24052001/Talk-to-DB/actions/workflows/ci.yml/badge.svg)](https://github.com/aman-24052001/Talk-to-DB/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](.github/workflows/ci.yml)
 
 Ask your database questions in plain English. A Claude-powered agent writes
 the SQL, a firewall validates it, a read-only session executes it, and the UI
 shows you the answer **plus the exact SQL and rows behind it** — nothing is
 hidden, nothing can be written.
 
-> v2 is a ground-up rewrite of the 2023 GooglePalm/LangChain prototype.
+**[Live demo →](https://aman-24052001.github.io/Talk-to-DB/)**
+
+> v2 was a ground-up rewrite of the 2023 GooglePalm/LangChain prototype.
+> v3 adds real-time SSE streaming, a mobile-friendly UI, and bug fixes.
 > See [`UPGRADE_NOTES.md`](UPGRADE_NOTES.md) for the full audit of what was
-> broken and why each piece was replaced.
+> broken in the original and why each piece was replaced.
 
 ---
 
@@ -90,12 +97,13 @@ bearer token, rate limit, audit path.
 | `/` | GET | the UI |
 | `/api/health` | GET | status, dialect, model, key presence |
 | `/api/schema` | GET | introspected schema (`?refresh=1` busts cache) |
-| `/api/ask` | POST | `{question, history[]}` → answer + SQL + rows + guardrail stamps |
+| `/api/ask` | POST | `{question, history[]}` → answer + SQL + rows + guardrail stamps (blocking) |
+| `/api/ask/stream` | POST | same input, **Server-Sent Events** response — emits `thinking` / `sql` / `blocked` / `error` / `done` / `err` events as the agent works, so the UI can show live progress instead of waiting on one big response |
 
 ## Tests
 
 ```bash
-python -m pytest tests/ -q     # 24 tests: firewall policy, RO session, full E2E flow
+python -m pytest tests/ -q     # 36 tests: firewall policy, RO session, SSE streaming, full E2E flow
 ```
 
 ## Docker

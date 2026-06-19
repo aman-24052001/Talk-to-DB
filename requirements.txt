@@ -1,11 +1,14 @@
-anthropic>=0.49
-fastapi>=0.115
-uvicorn[standard]>=0.30
-sqlalchemy>=2.0
-sqlglot>=25.0
-pydantic>=2.7
-pyyaml>=6.0
+anthropic>=0.49,<1.0
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+sqlalchemy>=2.0,<3.0
+sqlglot>=25.0,<31.0
+pydantic>=2.7,<3.0
+pyyaml>=6.0,<7.0
 
 # Optional drivers — uncomment what you need:
-# psycopg2-binary>=2.9      # PostgreSQL
-# pymysql>=1.1              # MySQL / MariaDB
+# psycopg2-binary>=2.9,<3.0   # PostgreSQL
+# pymysql>=1.1,<2.0           # MySQL / MariaDB
+
+# For fully reproducible installs (exact versions tested in CI),
+# use requirements-lock.txt instead: pip install -r requirements-lock.txt
