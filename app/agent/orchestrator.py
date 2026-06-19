@@ -18,11 +18,10 @@ from dataclasses import dataclass, field
 
 import anthropic
 
-from app.agent.prompts import EXECUTE_SQL_TOOL, build_system_prompt
+from app.backends.sql import SQLAdapter
 from app.config import AppConfig
 from app.db.executor import QueryExecutor, QueryResult
 from app.db.introspect import SchemaService
-from app.guardrails.validator import SQLRejected, sqlglot_dialect, validate_sql
 
 log = logging.getLogger("talk_to_db")
 
@@ -73,6 +72,7 @@ class SQLAgent:
         self._cfg = cfg
         self._schema = schema
         self._executor = executor
+        self._adapter = SQLAdapter(executor)
         self._client = anthropic.Anthropic(api_key=cfg.resolved_api_key)
 
     # ── blocking (original) ────────────────────────────────────────────────
@@ -131,8 +131,8 @@ class SQLAgent:
         """
         t0 = time.perf_counter()
         snapshot = self._schema.get()
-        dialect = sqlglot_dialect(snapshot.dialect)
-        system = build_system_prompt(dialect, snapshot.to_prompt())
+        dialect = self._adapter.dialect_name(snapshot.dialect)
+        system = self._adapter.system_prompt(dialect, snapshot.to_prompt())
 
         history_turns = self._cfg.guardrails.history_turns
         messages: list[dict] = []
@@ -159,7 +159,7 @@ class SQLAgent:
                     model=self._cfg.anthropic.model,
                     max_tokens=1500,
                     system=system,
-                    tools=[EXECUTE_SQL_TOOL],
+                    tools=[self._adapter.tool_schema()],
                     messages=messages,
                 )
 
@@ -272,14 +272,14 @@ class SQLAgent:
         self, raw_sql: str, dialect: str, known_tables: set[str]
     ) -> tuple[str, AgentStep, QueryResult | None]:
         try:
-            validated = validate_sql(
+            validated = self._adapter.validate(
                 raw_sql,
                 dialect=dialect,
                 known_tables=known_tables,
                 max_rows=self._cfg.guardrails.max_rows,
             )
-        except SQLRejected as e:
-            self._executor.audit("blocked", raw_sql, reason=str(e))
+        except self._adapter.RejectedError as e:
+            self._adapter.audit("blocked", raw_sql, reason=str(e))
             log.info("firewall blocked: %s | %s", raw_sql[:120], e)
             return (
                 f"REJECTED by SQL firewall: {e}",
@@ -287,7 +287,7 @@ class SQLAgent:
                 None,
             )
 
-        qr = self._executor.run(validated.sql)
+        qr = self._adapter.execute(validated)
         if not qr.ok:
             return (
                 f"Query error: {qr.error}",
