@@ -25,6 +25,23 @@ class AnthropicCfg(BaseModel):
 
 class DatabaseCfg(BaseModel):
     url: str = "sqlite:///data/demo.db"
+    # Explicit backend override. None = infer from the URL scheme (see
+    # infer_backend_type below). Only "sql" is implemented today; this
+    # field exists so config.yaml has a stable place to opt into future
+    # backends (e.g. "mongodb") without a breaking config-shape change.
+    type: str | None = None
+
+
+def infer_backend_type(url: str) -> str:
+    """Pick a backend family from a connection URL's scheme.
+
+    Pure string logic, deliberately with no import of anything under
+    app.backends — config.py must stay backend-agnostic so adding a new
+    backend later never requires touching this file's imports.
+    """
+    if url.startswith(("mongodb://", "mongodb+srv://")):
+        return "mongodb"
+    return "sql"
 
 
 class GuardrailsCfg(BaseModel):
@@ -71,6 +88,10 @@ class AppConfig(BaseModel):
     @property
     def resolved_api_key(self) -> str:
         return os.environ.get("ANTHROPIC_API_KEY") or self.anthropic.api_key
+
+    @property
+    def resolved_database_type(self) -> str:
+        return self.database.type or infer_backend_type(self.database.url)
 
 
 @lru_cache(maxsize=1)

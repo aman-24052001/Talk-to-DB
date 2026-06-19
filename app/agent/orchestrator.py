@@ -62,8 +62,14 @@ def _sse(event: str, data: dict) -> str:
 
 # ── Agent ──────────────────────────────────────────────────────────────────────
 
-class SQLAgent:
-    def __init__(self, cfg: AppConfig, schema: SchemaService, executor: QueryExecutor):
+class QueryAgent:
+    def __init__(
+        self,
+        cfg: AppConfig,
+        schema: SchemaService,
+        executor: QueryExecutor,
+        adapter: SQLAdapter | None = None,
+    ):
         if not cfg.resolved_api_key:
             raise RuntimeError(
                 "No Anthropic API key. Put it in config.yaml under anthropic.api_key "
@@ -72,7 +78,11 @@ class SQLAgent:
         self._cfg = cfg
         self._schema = schema
         self._executor = executor
-        self._adapter = SQLAdapter(executor)
+        # Back-compat: callers that built this the old way (3 args, no
+        # adapter) get the exact same SQLAdapter-over-this-executor behavior
+        # as before. New callers (app/main.py via build_backend) pass the
+        # adapter chosen by config.database.type explicitly.
+        self._adapter = adapter if adapter is not None else SQLAdapter(executor)
         self._client = anthropic.Anthropic(api_key=cfg.resolved_api_key)
 
     # ── blocking (original) ────────────────────────────────────────────────
@@ -314,3 +324,7 @@ class SQLAgent:
         step = AgentStep(kind="sql", sql=validated.sql,
                          rows=qr.row_count, elapsed_ms=qr.elapsed_ms)
         return payload, step, qr
+
+
+# Back-compat: code written against the old name keeps working unchanged.
+SQLAgent = QueryAgent

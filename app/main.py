@@ -13,10 +13,8 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.backends.factory import build_backend
 from app.config import PROJECT_ROOT, __version__, get_config
-from app.db.engine import build_engine
-from app.db.executor import QueryExecutor
-from app.db.introspect import SchemaService
 from app.guardrails.ratelimit import RateLimiter
 from app.schemas import AskRequest, AskResponse
 
@@ -38,21 +36,21 @@ def _ensure_demo_db(cfg) -> None:
 async def lifespan(app: FastAPI):
     cfg = get_config()
     _ensure_demo_db(cfg)
-    engine = build_engine(cfg)
-    schema = SchemaService(engine, cfg)
-    snapshot = schema.get()
+    backend = build_backend(cfg)
+    snapshot = backend.schema.get()
     log.info("connected to %s — %d table(s) visible", snapshot.dialect, len(snapshot.tables))
 
     app.state.cfg = cfg
-    app.state.engine = engine
-    app.state.schema = schema
-    app.state.executor = QueryExecutor(engine, cfg)
+    app.state.engine = backend.engine
+    app.state.schema = backend.schema
+    app.state.executor = backend.executor
+    app.state.adapter = backend.adapter
     app.state.limiter = RateLimiter(cfg.server.rate_limit_per_minute)
     app.state.agent = None
     yield
     # B1 FIX: clean shutdown of thread pool
     app.state.executor.shutdown()
-    engine.dispose()
+    backend.engine.dispose()
 
 
 app = FastAPI(
@@ -74,11 +72,12 @@ def require_auth(request: Request) -> None:
 
 def _agent(request: Request):
     if request.app.state.agent is None:
-        from app.agent.orchestrator import SQLAgent
-        request.app.state.agent = SQLAgent(
+        from app.agent.orchestrator import QueryAgent
+        request.app.state.agent = QueryAgent(
             request.app.state.cfg,
             request.app.state.schema,
             request.app.state.executor,
+            request.app.state.adapter,
         )
     return request.app.state.agent
 

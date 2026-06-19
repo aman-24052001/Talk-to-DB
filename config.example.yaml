@@ -17,6 +17,9 @@ database:
   #   postgresql+psycopg2://user:pass@host:5432/dbname
   #   mysql+pymysql://user:pass@host:3306/dbname
   url: "sqlite:///data/demo.db"
+  # type: "sql"                       # optional override; auto-detected from
+                                       # the URL scheme otherwise. Only "sql"
+                                       # is implemented today.
 
 # ── Everything below is optional — safe defaults are built in ──
 guardrails:
