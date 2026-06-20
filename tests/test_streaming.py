@@ -196,3 +196,45 @@ def test_executor_shutdown_is_callable():
     ex = QueryExecutor(engine, cfg)
     ex.shutdown()   # must not raise
     engine.dispose()
+
+
+def test_ask_raises_on_fatal_api_error_instead_of_returning_empty_answer(monkeypatch):
+    """Regression test: ask() used to silently swallow a fatal error from
+    the Anthropic call (the streaming generator's 'err' event had no
+    'kind'/'event' field for ask()'s simple parser to match on) and return
+    an empty-looking AgentAnswer(answer="") instead — which meant /api/ask
+    returned HTTP 200 with a blank answer on an API outage instead of the
+    intended 502. Discovered while building the multi-source Hub, which
+    needs to actually detect per-source failures."""
+    import anthropic
+
+    from app.agent.orchestrator import SQLAgent
+    from app.config import AppConfig
+    from app.db.engine import build_engine
+    from app.db.executor import QueryExecutor
+    from app.db.introspect import SchemaService
+
+    class _BrokenClient:
+        def __init__(self):
+            self.messages = types.SimpleNamespace(create=self._create)
+
+        def _create(self, **kwargs):
+            raise RuntimeError("simulated API outage")
+
+    monkeypatch.setattr(anthropic, "Anthropic", lambda api_key: _BrokenClient())
+
+    cfg = AppConfig()
+    cfg.anthropic.api_key = "test"
+    engine = build_engine(cfg)
+    schema = SchemaService(engine, cfg)
+    executor = QueryExecutor(engine, cfg)
+    agent = SQLAgent(cfg, schema, executor)
+    try:
+        try:
+            agent.ask("how many products?")
+            assert False, "expected ask() to raise on a fatal API error"
+        except RuntimeError as e:
+            assert "simulated API outage" in str(e)
+    finally:
+        executor.shutdown()
+        engine.dispose()

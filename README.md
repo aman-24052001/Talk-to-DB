@@ -8,7 +8,9 @@ Ask your database questions in plain English. A Claude-powered agent writes
 the query, a firewall validates it, a read-only connection executes it, and
 the UI shows you the answer **plus the exact query and rows behind it** —
 nothing is hidden, nothing can be written. Works against SQL (SQLite,
-PostgreSQL, MySQL) or MongoDB — picked automatically from `database.url`.
+PostgreSQL, MySQL) or MongoDB — picked automatically from `database.url` —
+either separately, or together against several sources at once via
+multi-source mode.
 
 **[Live demo →](https://aman-24052001.github.io/Talk-to-DB/)**
 
@@ -77,6 +79,42 @@ read-only grants (`SELECT` for SQL, the built-in `read` role for Mongo) and
 use that in the URL. The app enforces read-only on its own anyway, but
 least-privilege credentials make it belt-and-suspenders.
 
+### Multi-source mode — SQL and Mongo together
+
+By default there's one connected datastore (`database.url`). Setting
+`sources` instead connects to several, independently, and answers one
+question across all of them:
+
+```yaml
+sources:
+  - name: shop_sql
+    database:
+      url: "sqlite:///data/demo.db"
+  - name: shop_reviews
+    database:
+      url: "mongomock://demo"      # bundled, zero-setup Mongo demo — see below
+```
+
+With `sources` set, `database` above is ignored, `/api/ask`/`/api/ask/stream`
+return 400, and a new `/api/ask/multi` becomes available: a lightweight
+planner decides which source(s) a question needs (skipped entirely with
+only one source, so single-source-shaped configs pay zero extra cost),
+each chosen source is queried in parallel by its own ordinary `QueryAgent`,
+and — only if 2+ sources actually answered — one more call composes a
+single answer citing which source supported which part. One source failing
+doesn't take the others down; the response says what broke and answers
+from what worked. No streaming variant yet for this endpoint.
+
+### Bundled Mongo demo
+
+`database.url: "mongomock://demo"` (or as a `sources` entry, as above) is
+a zero-setup, in-memory Mongo demo — the Mongo-side equivalent of the
+bundled SQLite demo, no real MongoDB server needed. It seeds
+`product_reviews` and `support_tickets`, deliberately complementary to the
+SQL demo's catalog/orders rather than duplicating it (and referencing the
+same `customer_id`/`t_shirt_id` ranges), so a question spanning both demos
+in multi-source mode has a real, joinable answer.
+
 ---
 
 ## Security & guardrails (defence in depth)
@@ -114,15 +152,19 @@ bearer token, rate limit, audit path.
 | `/` | GET | the UI |
 | `/api/health` | GET | status, dialect, model, key presence |
 | `/api/schema` | GET | introspected schema (`?refresh=1` busts cache) |
-| `/api/ask` | POST | `{question, history[]}` → answer + SQL + rows + guardrail stamps (blocking) |
+| `/api/ask` | POST | `{question, history[]}` → answer + SQL + rows + guardrail stamps (blocking; 400 if `config.sources` is set) |
 | `/api/ask/stream` | POST | same input, **Server-Sent Events** response — emits `thinking` / `sql` / `blocked` / `error` / `done` / `err` events as the agent works, so the UI can show live progress instead of waiting on one big response |
+| `/api/ask/multi` | POST | multi-source only (400 unless `config.sources` has 2+ entries) — `{question, history[]}` → one synthesized answer + a per-source breakdown (answer/sql/rows/error for each) |
 
 ## Tests
 
 ```bash
-python -m pytest tests/ -q     # 81 tests: SQL firewall + Mongo firewall, RO
+python -m pytest tests/ -q     # 100 tests: SQL firewall + Mongo firewall, RO
                                 # enforcement for both, schema introspection,
-                                # SSE streaming, full E2E flow for both backends
+                                # SSE streaming, full E2E flow for both
+                                # backends, the multi-source Hub (planner/
+                                # fan-out/synthesis/partial-failure), and the
+                                # bundled Mongo demo
 ```
 
 ## Docker
@@ -140,11 +182,13 @@ run.py                   ← entrypoint
 app/
   config.py              typed config, env override, backend-type inference
   main.py                FastAPI wiring, auth, rate limit
+  hub.py                 multi-source Planner + fan-out + Synthesizer
   agent/                 Claude tool-use loop + SQL prompts/tool schema
   backends/              BackendAdapter contract + factory (picks SQL or Mongo)
     sql.py               SQL adapter (composes guardrails/ + db/ below)
     mongo/                Mongo adapter: engine (RO wrapper), introspect
-                          (sampling), validator (pipeline firewall), executor
+                          (sampling), validator (pipeline firewall), executor,
+                          demo_seed (bundled mongomock://demo dataset)
   guardrails/            AST SQL firewall + rate limiter
   db/                    read-only SQL engine, introspection, guarded executor
 ui/index.html            neo-brutalist single-file frontend

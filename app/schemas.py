@@ -34,3 +34,20 @@ class AskResponse(BaseModel):
     blocked: int
     elapsed_ms: int
     model: str
+
+
+class SourceAskResult(BaseModel):
+    name: str
+    answer: str
+    sql: str | None = None
+    columns: list[str] = Field(default_factory=list)
+    rows: list[list] = Field(default_factory=list)
+    row_count: int = 0
+    error: str | None = None
+
+
+class MultiAskResponse(BaseModel):
+    answer: str
+    planned_sources: list[str]
+    sources: list[SourceAskResult]
+    elapsed_ms: int

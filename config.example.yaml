@@ -14,15 +14,31 @@ anthropic:
 database:
   # SQL: any SQLAlchemy URL. Mongo: a mongodb:// or mongodb+srv:// URL — the
   # backend is auto-detected from the scheme, no extra config needed.
+  # mongomock://demo is a bundled, zero-setup in-memory Mongo demo (no real
+  # MongoDB server needed) — the Mongo-side equivalent of the SQLite demo.
   # Examples:
   #   sqlite:///data/demo.db                          ← bundled demo (default)
   #   postgresql+psycopg2://user:pass@host:5432/dbname
   #   mysql+pymysql://user:pass@host:3306/dbname
   #   mongodb://user:pass@host:27017/dbname            ← database name required in the path
+  #   mongomock://demo                                 ← bundled Mongo demo, zero setup
   url: "sqlite:///data/demo.db"
   # type: "sql"                       # optional override; auto-detected from
                                        # the URL scheme otherwise. Implemented:
                                        # "sql" (sqlite/postgres/mysql), "mongodb".
+
+# Multi-source mode: connect to several datastores independently and answer
+# one question across all of them via POST /api/ask/multi. Leave this empty
+# (the default) for single-source mode using `database` above — that's the
+# common case and costs nothing extra. Uncomment to try it with the bundled
+# demos:
+# sources:
+#   - name: shop_sql
+#     database:
+#       url: "sqlite:///data/demo.db"
+#   - name: shop_reviews
+#     database:
+#       url: "mongomock://demo"
 
 # ── Everything below is optional — safe defaults are built in ──
 guardrails:

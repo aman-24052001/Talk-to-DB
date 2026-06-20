@@ -105,7 +105,45 @@ identically whether the backend behind it is SQL or Mongo.
   approval flows and is a different product.
 - **Multi-tenant SaaS concerns** (SSO, per-user DB grants, Redis rate limits) —
   this is a single-process internal tool; swap-in points are noted in code.
-- **Multiple simultaneous backends in one deployment** — one connected
-  datastore per deployment today, chosen by `database.url`. Answering one
-  question across an SQL source *and* a Mongo source at once would need a
-  Planner/Synthesizer layer on top of `QueryAgent`, which doesn't exist yet.
+- **Streaming for multi-source mode** — `Hub.ask()` (app/hub.py) is blocking
+  only. Multiplexing live progress across N parallel agents (whose
+  "thinking" event fires when?) is a real design problem, deliberately
+  left until the single-source SSE UI actually needs a multi-source
+  equivalent.
+
+## Multi-source mode (app/hub.py)
+
+`config.sources` (2+ named entries, each with its own `database` block)
+switches the deployment from one connected datastore to a `Hub` spanning
+several — SQL and Mongo simultaneously, or several of either. When set,
+`database` at the top level is ignored entirely; `/api/ask` and
+`/api/ask/stream` return 400 (use `/api/ask/multi` instead), and vice
+versa when `sources` isn't set.
+
+```
+ POST /api/ask/multi {question, history}
+   ▼
+ Hub.ask()
+   │  Planner: 1 cheap call ("which source(s) hold what this needs?"),
+   │  skipped entirely with only 1 source configured. Falls back to
+   │  "ask every source" if the model's output doesn't parse — over-
+   │  including is safer than silently answering from nothing.
+   │
+   │  Fan-out: each chosen source's QueryAgent.ask() runs in parallel
+   │  (ThreadPoolExecutor) — same per-backend agents single-source mode
+   │  uses, completely unaware they're part of a Hub. One source failing
+   │  doesn't take down the others; the Hub returns what succeeded plus
+   │  which source failed and why.
+   │
+   ▼  Synthesizer: skipped if only one source actually got queried (its
+      answer is returned as-is); otherwise one more call composes a
+      single answer citing which source supported which part.
+ MultiAskResponse: answer + per-source breakdown (answer/sql/rows/error each)
+```
+
+`build_backend(cfg, database=...)` (app/backends/factory.py) is what makes
+this possible without duplicating any backend logic: passing an explicit
+`DatabaseCfg` connects to that instead of `cfg.database`, via a
+`cfg.model_copy(update={"database": db_cfg})` — `build_engine`/
+`SchemaService`/`QueryExecutor`/the Mongo equivalents never needed to
+change; they already just read `cfg.database.url` fresh each call.

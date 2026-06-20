@@ -12,3 +12,4 @@ sqlglot==30.11.0
 pydantic==2.13.4
 pyyaml==6.0.3
 pymongo==4.17.0
+mongomock==4.3.0

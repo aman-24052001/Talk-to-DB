@@ -39,9 +39,15 @@ def infer_backend_type(url: str) -> str:
     app.backends — config.py must stay backend-agnostic so adding a new
     backend later never requires touching this file's imports.
     """
-    if url.startswith(("mongodb://", "mongodb+srv://")):
+    if url.startswith(("mongodb://", "mongodb+srv://", "mongomock://")):
         return "mongodb"
     return "sql"
+
+
+class SourceCfg(BaseModel):
+    """One named, independently-connected datastore for multi-source mode."""
+    name: str
+    database: DatabaseCfg
 
 
 class GuardrailsCfg(BaseModel):
@@ -81,9 +87,22 @@ class LoggingCfg(BaseModel):
 class AppConfig(BaseModel):
     anthropic: AnthropicCfg = AnthropicCfg()
     database: DatabaseCfg = DatabaseCfg()
+    # Multi-source mode. Empty (default) = single-source behavior, exactly as
+    # before, driven entirely by `database` above. Non-empty = the Hub
+    # (app/hub.py) connects to every listed source independently and answers
+    # questions across them; `database` above is then unused.
+    sources: list[SourceCfg] = []
     guardrails: GuardrailsCfg = GuardrailsCfg()
     server: ServerCfg = ServerCfg()
     logging: LoggingCfg = LoggingCfg()
+
+    @field_validator("sources")
+    @classmethod
+    def _unique_source_names(cls, v: list[SourceCfg]) -> list[SourceCfg]:
+        names = [s.name for s in v]
+        if len(names) != len(set(names)):
+            raise ValueError("config.sources: every source needs a unique 'name'.")
+        return v
 
     @property
     def resolved_api_key(self) -> str:
@@ -100,8 +119,13 @@ def get_config() -> AppConfig:
     if CONFIG_PATH.exists():
         raw = yaml.safe_load(CONFIG_PATH.read_text()) or {}
     cfg = AppConfig(**raw)
-    url = cfg.database.url
-    if url.startswith("sqlite:///") and not url.startswith("sqlite:////"):
-        rel = url.removeprefix("sqlite:///")
-        cfg.database.url = f"sqlite:///{(PROJECT_ROOT / rel).resolve()}"
+
+    def _resolve_sqlite(db: DatabaseCfg) -> None:
+        if db.url.startswith("sqlite:///") and not db.url.startswith("sqlite:////"):
+            rel = db.url.removeprefix("sqlite:///")
+            db.url = f"sqlite:///{(PROJECT_ROOT / rel).resolve()}"
+
+    _resolve_sqlite(cfg.database)
+    for src in cfg.sources:
+        _resolve_sqlite(src.database)
     return cfg

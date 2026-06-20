@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from app.backends.factory import build_backend
 from app.config import PROJECT_ROOT, __version__, get_config
 from app.guardrails.ratelimit import RateLimiter
-from app.schemas import AskRequest, AskResponse
+from app.schemas import AskRequest, AskResponse, MultiAskResponse, SourceAskResult
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger("talk_to_db")
@@ -24,9 +24,9 @@ log = logging.getLogger("talk_to_db")
 UI_DIR = PROJECT_ROOT / "ui"
 
 
-def _ensure_demo_db(cfg) -> None:
+def _ensure_demo_db(database_cfg) -> None:
     demo = (PROJECT_ROOT / "data" / "demo.db").resolve()
-    if cfg.database.url == f"sqlite:///{demo}" and not demo.exists():
+    if database_cfg.url == f"sqlite:///{demo}" and not demo.exists():
         import runpy
         log.info("demo database missing — seeding %s", demo)
         runpy.run_path(str(PROJECT_ROOT / "scripts" / "create_demo_db.py"), run_name="__main__")
@@ -35,19 +35,33 @@ def _ensure_demo_db(cfg) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     cfg = get_config()
-    _ensure_demo_db(cfg)
+    app.state.cfg = cfg
+    app.state.limiter = RateLimiter(cfg.server.rate_limit_per_minute)
+    app.state.agent = None
+    app.state.hub = None
+    app.state.dialect = None
+
+    if cfg.sources:
+        from app.hub import Hub
+        for src in cfg.sources:
+            _ensure_demo_db(src.database)
+        hub = Hub(cfg)
+        app.state.hub = hub
+        log.info("multi-source hub ready: %s", ", ".join(hub.source_names))
+        yield
+        hub.close()
+        return
+
+    _ensure_demo_db(cfg.database)
     backend = build_backend(cfg)
     snapshot = backend.schema.get()
     log.info("connected to %s — %d table(s) visible", snapshot.dialect, len(snapshot.tables))
 
-    app.state.cfg = cfg
     app.state.engine = backend.engine
     app.state.dialect = snapshot.dialect
     app.state.schema = backend.schema
     app.state.executor = backend.executor
     app.state.adapter = backend.adapter
-    app.state.limiter = RateLimiter(cfg.server.rate_limit_per_minute)
-    app.state.agent = None
     yield
     # B1 FIX: clean shutdown of thread pool
     app.state.executor.shutdown()
@@ -72,6 +86,12 @@ def require_auth(request: Request) -> None:
 
 
 def _agent(request: Request):
+    if request.app.state.hub is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="This deployment is configured for multi-source mode "
+                   "(config.sources is set). Use /api/ask/multi instead.",
+        )
     if request.app.state.agent is None:
         from app.agent.orchestrator import QueryAgent
         request.app.state.agent = QueryAgent(
@@ -94,10 +114,12 @@ def _check_rate(request: Request) -> str:
 @app.get("/api/health")
 def health(request: Request):
     cfg = request.app.state.cfg
+    hub = request.app.state.hub
     return {
         "status": "ok",
         "version": __version__,
-        "dialect": request.app.state.dialect,
+        "dialect": "multi-source" if hub is not None else request.app.state.dialect,
+        "sources": hub.source_names if hub is not None else None,
         "model": cfg.anthropic.model,
         "read_only": True,
         "api_key_present": bool(cfg.resolved_api_key),
@@ -106,6 +128,9 @@ def health(request: Request):
 
 @app.get("/api/schema", dependencies=[Depends(require_auth)])
 def get_schema(request: Request, refresh: bool = False):
+    hub = request.app.state.hub
+    if hub is not None:
+        return hub.schemas(force=refresh)
     return request.app.state.schema.get(force=refresh).to_api()
 
 
@@ -153,6 +178,38 @@ def ask_stream(request: Request, body: AskRequest):
             yield f"event: err\ndata: {json.dumps({'detail': str(e)})}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@app.post("/api/ask/multi", response_model=MultiAskResponse, dependencies=[Depends(require_auth)])
+def ask_multi(request: Request, body: AskRequest):
+    """Multi-source endpoint — only available when config.sources is set.
+    Blocking only; no streaming variant yet (see app/hub.py's module
+    docstring for why that's a real design problem, not an oversight)."""
+    _check_rate(request)
+    hub = request.app.state.hub
+    if hub is None:
+        raise HTTPException(
+            status_code=400,
+            detail="This deployment isn't configured for multi-source mode. "
+                   "Set config.sources (2+ entries) to enable /api/ask/multi.",
+        )
+    try:
+        result = hub.ask(body.question, [t.model_dump() for t in body.history])
+    except Exception as e:
+        log.exception("ask_multi failed")
+        raise HTTPException(status_code=502, detail=f"Hub error: {e}") from e
+    return MultiAskResponse(
+        answer=result.answer,
+        planned_sources=result.planned_sources,
+        sources=[
+            SourceAskResult(
+                name=s.name, answer=s.answer, sql=s.sql, columns=s.columns,
+                rows=s.rows, row_count=s.row_count, error=s.error,
+            )
+            for s in result.sources
+        ],
+        elapsed_ms=result.elapsed_ms,
+    )
 
 
 @app.exception_handler(Exception)

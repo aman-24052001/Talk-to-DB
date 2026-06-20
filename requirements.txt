@@ -6,6 +6,7 @@ sqlglot>=25.0,<31.0
 pydantic>=2.7,<3.0
 pyyaml>=6.0,<7.0
 pymongo>=4.6,<5.0
+mongomock>=4.1,<5.0   # powers the bundled mongomock://demo Mongo demo mode
 
 # Optional drivers — uncomment what you need:
 # psycopg2-binary>=2.9,<3.0   # PostgreSQL

@@ -111,6 +111,8 @@ class QueryAgent:
                         answer.steps.append(AgentStep(
                             kind="error", sql=data.get("sql", ""), detail=data.get("detail", "")
                         ))
+                    elif kind == "err":
+                        raise RuntimeError(data.get("detail") or "Agent error (no detail given).")
                     elif kind == "done":
                         answer.answer = data.get("answer", "")
                         answer.sql = data.get("sql")
@@ -243,7 +245,7 @@ class QueryAgent:
 
         except Exception as e:
             log.exception("ask_stream agent error")
-            yield _sse("err", {"detail": str(e)})
+            yield _sse("err", {"kind": "err", "detail": str(e)})
             return
 
         elapsed_ms = int((time.perf_counter() - t0) * 1000)

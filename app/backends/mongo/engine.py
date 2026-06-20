@@ -69,6 +69,17 @@ class ReadOnlyDatabase:
 
 
 def build_mongo_client(cfg: AppConfig) -> MongoClient:
+    if cfg.database.url.startswith("mongomock://"):
+        try:
+            import mongomock
+        except ImportError as e:
+            raise RuntimeError(
+                "database.url uses the bundled mongomock:// demo mode, but "
+                "the 'mongomock' package isn't installed. pip install "
+                "mongomock, or point database.url at a real MongoDB server."
+            ) from e
+        return mongomock.MongoClient()  # type: ignore[return-value]
+
     return MongoClient(
         cfg.database.url,
         serverSelectionTimeoutMS=5000,
@@ -81,7 +92,20 @@ def get_readonly_db(client: MongoClient, cfg: AppConfig) -> ReadOnlyDatabase:
     (mongodb://host/dbname) and wrap it as read-only. Raises clearly if
     the URL doesn't specify a database — there is no sane default to fall
     back to (unlike SQL, there's no single 'current database' notion
-    without one)."""
+    without one).
+
+    Special-cases database.url == 'mongomock://demo': an in-memory,
+    zero-setup demo seeded with sample product reviews + support tickets,
+    the Mongo-side equivalent of the bundled SQLite demo for SQL.
+    """
+    if cfg.database.url.startswith("mongomock://"):
+        db_name = cfg.database.url.removeprefix("mongomock://") or "demo"
+        db = client[db_name]
+        if db_name == "demo":
+            from app.backends.mongo.demo_seed import seed
+            seed(db)
+        return ReadOnlyDatabase(db)
+
     db = client.get_default_database()
     if db is None:
         raise ValueError(
