@@ -119,3 +119,29 @@ def test_schema_endpoint_returns_per_source_in_multi_mode(monkeypatch):
         body = r.json()
         assert set(body.keys()) == {"shop", "reviews"}
         assert "dialect" in body["shop"]
+
+
+def test_ask_multi_stream_returns_sse_with_done_event(monkeypatch):
+    monkeypatch.setattr(main_module, "get_config", lambda: _multi_source_cfg())
+    monkeypatch.setattr(anthropic, "Anthropic", _FakeFactory([
+        [lambda kw: _end_turn("shop answer")],
+        [lambda kw: _end_turn("reviews answer")],
+        [
+            lambda kw: _end_turn('["shop","reviews"]'),
+            lambda kw: _end_turn("combined answer"),
+        ],
+    ]))
+    with TestClient(main_module.app) as client:
+        r = client.post("/api/ask/multi/stream", json={"question": "status?"})
+        assert r.status_code == 200
+        assert "text/event-stream" in r.headers["content-type"]
+        assert "event: plan" in r.text
+        assert "event: done" in r.text
+        assert "event: source_done" in r.text
+
+
+def test_ask_multi_stream_returns_400_when_not_multi_source():
+    with TestClient(main_module.app) as client:
+        r = client.post("/api/ask/multi/stream", json={"question": "anything"})
+        assert r.status_code == 400
+        assert "multi-source" in r.json()["detail"]

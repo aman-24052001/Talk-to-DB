@@ -59,4 +59,4 @@ server:
   rate_limit_per_minute: 30
 
 logging:
-  audit_file: "data/audit.log"      # every SQL executed or blocked is recorded here
+  audit_file: "data/audit.log"      # every query executed or blocked is recorded here

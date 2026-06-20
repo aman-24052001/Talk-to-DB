@@ -52,10 +52,12 @@ The diagram below shows the SQL path concretely; the Mongo path is the
  UI renders: answer card · stamp strip · SHOW SQL · result table
 ```
 
-`AskResponse.sql` (and `StepOut.sql`) hold the literal SQL text for the SQL
-backend, or a canonical JSON string (`{"operation","collection","query"}`)
-for Mongo — the field name is deliberately not yet renamed to something
-generic; see `app/backends/base.py`'s note on why that rename is deferred.
+Responses carry both `query` (the backend-agnostic field — literal SQL for
+SQL backends, or a canonical JSON string `{"operation","collection","query"}`
+for Mongo) and `sql` (a deprecated alias, kept populated so existing clients
+don't break). Producers set `sql`; pydantic `model_validator`s in
+`app/schemas.py` mirror it into `query` so the two never drift. `sql` will
+be removed in a future major version.
 
 ## Module map
 
@@ -71,7 +73,7 @@ generic; see `app/backends/base.py`'s note on why that rename is deferred.
 | `app/db/introspect.py` | cached SQL schema snapshot → prompt text + sidebar JSON |
 | `app/db/executor.py` | guarded SQL execution, audit log |
 | `app/backends/mongo/adapter.py` | Mongo adapter — composes the four files below behind the contract |
-| `app/backends/mongo/engine.py` | Mongo connection + capability-narrowed read-only wrapper (no write methods reachable, not just permission-checked) |
+| `app/backends/mongo/engine.py` | Mongo connection + capability-narrowed read-only wrapper (no write methods reachable, not just permission-checked) + a startup `connectionStatus` probe that warns if the connected user's credentials carry write privileges |
 | `app/backends/mongo/introspect.py` | sampling-based schema inference (Mongo is schemaless — field name/type/presence% inferred from sampled docs) |
 | `app/backends/mongo/validator.py` | the Mongo firewall — stage allowlist + recursive `$where`/`$function`/`$accumulator` scan, security core for the Mongo path |
 | `app/backends/mongo/executor.py` | guarded Mongo execution, audit log |
@@ -105,11 +107,6 @@ identically whether the backend behind it is SQL or Mongo.
   approval flows and is a different product.
 - **Multi-tenant SaaS concerns** (SSO, per-user DB grants, Redis rate limits) —
   this is a single-process internal tool; swap-in points are noted in code.
-- **Streaming for multi-source mode** — `Hub.ask()` (app/hub.py) is blocking
-  only. Multiplexing live progress across N parallel agents (whose
-  "thinking" event fires when?) is a real design problem, deliberately
-  left until the single-source SSE UI actually needs a multi-source
-  equivalent.
 
 ## Multi-source mode (app/hub.py)
 
@@ -117,19 +114,19 @@ identically whether the backend behind it is SQL or Mongo.
 switches the deployment from one connected datastore to a `Hub` spanning
 several — SQL and Mongo simultaneously, or several of either. When set,
 `database` at the top level is ignored entirely; `/api/ask` and
-`/api/ask/stream` return 400 (use `/api/ask/multi` instead), and vice
-versa when `sources` isn't set.
+`/api/ask/stream` return 400 (use `/api/ask/multi` or `/api/ask/multi/stream`
+instead), and vice versa when `sources` isn't set.
 
 ```
- POST /api/ask/multi {question, history}
+ POST /api/ask/multi {question, history}            (or /api/ask/multi/stream)
    ▼
- Hub.ask()
+ Hub.ask()  /  Hub.ask_stream()
    │  Planner: 1 cheap call ("which source(s) hold what this needs?"),
    │  skipped entirely with only 1 source configured. Falls back to
    │  "ask every source" if the model's output doesn't parse — over-
    │  including is safer than silently answering from nothing.
    │
-   │  Fan-out: each chosen source's QueryAgent.ask() runs in parallel
+   │  Fan-out: each chosen source's QueryAgent runs in parallel
    │  (ThreadPoolExecutor) — same per-backend agents single-source mode
    │  uses, completely unaware they're part of a Hub. One source failing
    │  doesn't take down the others; the Hub returns what succeeded plus
@@ -138,8 +135,17 @@ versa when `sources` isn't set.
    ▼  Synthesizer: skipped if only one source actually got queried (its
       answer is returned as-is); otherwise one more call composes a
       single answer citing which source supported which part.
- MultiAskResponse: answer + per-source breakdown (answer/sql/rows/error each)
+ MultiAskResponse: answer + per-source breakdown (answer/query/rows/error each)
 ```
+
+**Streaming variant** (`Hub.ask_stream` → `/api/ask/multi/stream`): the
+hard part the single-source streamer doesn't face is that N agents emit
+events concurrently, so there's no natural event order. Resolution: each
+source runs in its own thread and pushes its raw SSE frames — re-tagged
+with a `source` field — into one shared `queue.Queue`; the main generator
+drains that queue and forwards frames in arrival order. The client sees
+genuinely interleaved, source-labelled progress, bracketed by `plan` /
+`source_start` / `source_done` / `synthesizing` / `done` lifecycle events.
 
 `build_backend(cfg, database=...)` (app/backends/factory.py) is what makes
 this possible without duplicating any backend logic: passing an explicit

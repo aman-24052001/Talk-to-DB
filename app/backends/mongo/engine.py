@@ -68,6 +68,51 @@ class ReadOnlyDatabase:
         return self.get_collection(name)
 
 
+def verify_readonly_credentials(client: MongoClient, cfg: AppConfig) -> str:
+    """Best-effort startup check that the *credentials* the connection uses
+    are themselves read-only — the operational (RBAC) layer that complements
+    the in-code capability narrowing. Returns a human-readable status string;
+    never raises (a probe failure must not stop a working read-only app from
+    starting).
+
+    This can't *create* a read-only user for you — that needs admin rights
+    this app deliberately doesn't want. What it can do is look at the
+    connected user's effective privileges via connectionStatus and tell you
+    whether any write action is granted, turning the 'use a read-only role'
+    advice from a README footnote into a logged startup signal.
+    """
+    if cfg.database.url.startswith("mongomock://"):
+        return "demo mode (mongomock) — no real credentials to verify"
+
+    write_actions = {
+        "insert", "update", "remove", "createCollection", "dropCollection",
+        "dropDatabase", "createIndex", "dropIndex", "renameCollectionSameDB",
+        "createUser", "dropUser", "grantRole",
+    }
+    try:
+        db = client.get_default_database()
+        info = db.command("connectionStatus", showPrivileges=True)
+        authed = info.get("authInfo", {})
+        users = authed.get("authenticatedUsers", [])
+        if not users:
+            return ("connected WITHOUT authentication — anyone with this URL "
+                    "has full access. Use a dedicated user with the 'read' role.")
+        granted_writes = set()
+        for priv in authed.get("authenticatedUserPrivileges", []):
+            for action in priv.get("actions", []):
+                if action in write_actions:
+                    granted_writes.add(action)
+        if granted_writes:
+            return ("connected user has WRITE privileges "
+                    f"({', '.join(sorted(granted_writes))}). The app enforces "
+                    "read-only in code regardless, but least-privilege "
+                    "credentials (Mongo's built-in 'read' role) are strongly "
+                    "recommended as defence in depth.")
+        return "connected user privileges look read-only — good"
+    except Exception as e:  # noqa: BLE001 — a probe failure must never block startup
+        return f"could not verify credential privileges ({type(e).__name__}); continuing"
+
+
 def build_mongo_client(cfg: AppConfig) -> MongoClient:
     if cfg.database.url.startswith("mongomock://"):
         try:

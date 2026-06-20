@@ -196,6 +196,7 @@ class QueryAgent:
                         yield _sse("blocked", {
                             "kind": "blocked",
                             "turn": turns,
+                            "query": raw_query,
                             "sql": raw_query,
                             "reason": step.detail,
                         })
@@ -204,6 +205,7 @@ class QueryAgent:
                         yield _sse("error", {
                             "kind": "error",
                             "turn": turns,
+                            "query": step.sql,
                             "sql": step.sql,
                             "detail": step.detail,
                         })
@@ -214,6 +216,7 @@ class QueryAgent:
                         yield _sse("sql", {
                             "kind": "sql",
                             "turn": turns,
+                            "query": step.sql,
                             "sql": step.sql,
                             "rows": step.rows,
                             "elapsed_ms": step.elapsed_ms,
@@ -253,7 +256,8 @@ class QueryAgent:
         done_payload: dict = {
             "event": "done",
             "answer": final_answer,
-            "sql": None,
+            "query": None,
+            "sql": None,        # deprecated alias for `query`
             "columns": [],
             "rows": [],
             "row_count": 0,
@@ -263,13 +267,14 @@ class QueryAgent:
             "elapsed_ms": elapsed_ms,
             "model": self._cfg.anthropic.model,
             "steps": [
-                {"kind": s.kind, "sql": s.sql, "detail": s.detail,
+                {"kind": s.kind, "query": s.sql, "sql": s.sql, "detail": s.detail,
                  "rows": s.rows, "elapsed_ms": s.elapsed_ms}
                 for s in steps
             ],
         }
         if last_good is not None:
             done_payload.update({
+                "query": last_good.sql,
                 "sql": last_good.sql,
                 "columns": last_good.columns,
                 "rows": last_good.rows,

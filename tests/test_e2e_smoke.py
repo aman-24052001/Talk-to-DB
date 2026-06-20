@@ -60,4 +60,8 @@ def test_full_ask_flow(monkeypatch):
         assert body["steps"][0]["kind"] == "blocked"
         assert body["steps"][1]["kind"] == "sql"
         assert body["sql"] and "select" in body["sql"].lower()
+        # dual-field contract: the generic `query` field must be present and
+        # mirror the deprecated `sql` alias, top-level and per-step.
+        assert body["query"] == body["sql"]
+        assert body["steps"][1]["query"] == body["steps"][1]["sql"]
         assert body["row_count"] >= 1 and body["columns"] == ["brand", "stock"]

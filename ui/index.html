@@ -354,11 +354,21 @@ const api = window.TTDB_API || {
   }),
 };
 
+/* Backend-aware label for the generated query. SQL backends say "SQL";
+   Mongo / multi-source say the generic "QUERY". Set during boot() from
+   /api/health's dialect. Lowercased forms used in button text. */
+let QUERY_LABEL = 'query';
+function setQueryLabel(dialect) {
+  const d = (dialect || '').toLowerCase();
+  QUERY_LABEL = (d === 'sqlite' || d === 'postgresql' || d === 'mysql' || d === 'sql') ? 'sql' : 'query';
+}
+
 /* ── boot ── */
 async function boot() {
   try {
     const [h, s] = await Promise.all([api.health(), api.schema()]);
     const dialect = (h.dialect || s.dialect || 'DB').toUpperCase();
+    setQueryLabel(h.dialect || s.dialect);
     $('#conn-text').textContent = dialect + ' · LIVE';
     $('#chip-model').textContent = (h.model || 'claude').replace('claude-','').toUpperCase();
     if (h.api_key_present === false) {
@@ -467,18 +477,20 @@ function makeThinkingBar(label) {
   return bar;
 }
 
-function makeLiveStep(kind, sql, detail) {
+function makeLiveStep(kind, query, detail) {
   const icons = {sql:'✓', blocked:'⊘', error:'✗', thinking:'◌'};
   const labels = {sql:'executed', blocked:'blocked by firewall', error:'query error', thinking:'calling model'};
   const s = document.createElement('div');
   s.className = `live-step ${kind}`;
-  const sqlSnip = sql ? `<span class="step-sql">${esc(sql)}</span>` : '';
+  const sqlSnip = query ? `<span class="step-sql">${esc(query)}</span>` : '';
   const det = detail ? ` — ${esc(detail.slice(0,80))}` : '';
   s.innerHTML = `<span class="step-icon">${icons[kind]||'·'}</span><span>${labels[kind]||kind}${det}</span>${sqlSnip}`;
   return s;
 }
 
 function renderFinalCard(card, data) {
+  const Q = (data.query != null ? data.query : data.sql);   // prefer generic field
+  const qlabel = QUERY_LABEL;                                // 'sql' or 'query'
   let html = `<div class="answer">${esc(data.answer)}</div>`;
 
   // stamp strip
@@ -486,7 +498,7 @@ function renderFinalCard(card, data) {
   stamps.push(`<span class="stamp ok">✓ firewall pass</span>`);
   if (data.blocked > 0) stamps.push(`<span class="stamp block">⊘ ${data.blocked} blocked</span>`);
   stamps.push(`<span class="stamp ok">⛨ read-only</span>`);
-  if (data.row_count != null && data.sql) stamps.push(`<span class="stamp meta">${data.row_count} rows</span>`);
+  if (data.row_count != null && Q) stamps.push(`<span class="stamp meta">${data.row_count} rows</span>`);
   if (data.truncated) stamps.push(`<span class="stamp warn">⚠ limit hit</span>`);
   stamps.push(`<span class="stamp meta">${data.turns} turn${data.turns===1?'':'s'}</span>`);
   stamps.push(`<span class="stamp meta">${data.elapsed_ms}ms</span>`);
@@ -497,19 +509,19 @@ function renderFinalCard(card, data) {
   if (fails.length) {
     html += `<div class="failwrap">${fails.map(s => `
       <div class="failcard">
-        <div class="failhead">${s.kind==='blocked' ? '⊘ blocked by firewall' : '✗ sql error (model retried)'}</div>
-        <pre class="failsql">${esc(s.sql)}</pre>
+        <div class="failhead">${s.kind==='blocked' ? '⊘ blocked by firewall' : `✗ ${qlabel} error (model retried)`}</div>
+        <pre class="failsql">${esc(s.query != null ? s.query : s.sql)}</pre>
         <div class="faildetail">${esc(s.detail)}</div>
       </div>`).join('')}</div>`;
   }
 
-  // SQL block (shown by default)
-  if (data.sql) {
+  // query block (shown by default)
+  if (Q) {
     html += `<div class="sqlbar">
-      <button class="mini toggle-sql">{ } hide sql</button>
-      <button class="mini copy-sql">⧉ copy sql</button>
+      <button class="mini toggle-sql">{ } hide ${qlabel}</button>
+      <button class="mini copy-sql">⧉ copy ${qlabel}</button>
     </div>
-    <div class="sqlbox"><pre>${esc(data.sql)}</pre></div>`;
+    <div class="sqlbox"><pre>${esc(Q)}</pre></div>`;
   }
 
   // results table
@@ -526,16 +538,16 @@ function renderFinalCard(card, data) {
 
   card.innerHTML = html;
 
-  // wire SQL toggle
+  // wire query toggle
   const sqlbox = card.querySelector('.sqlbox');
   card.querySelector('.toggle-sql')?.addEventListener('click', e => {
     sqlbox.classList.toggle('show');
-    e.target.textContent = sqlbox.classList.contains('show') ? '{ } hide sql' : '{ } show sql';
+    e.target.textContent = sqlbox.classList.contains('show') ? `{ } hide ${qlabel}` : `{ } show ${qlabel}`;
   });
   card.querySelector('.copy-sql')?.addEventListener('click', e => {
-    navigator.clipboard?.writeText(data.sql).then(() => {
+    navigator.clipboard?.writeText(Q).then(() => {
       e.target.textContent = '✓ copied';
-      setTimeout(() => { e.target.textContent = '⧉ copy sql'; }, 1400);
+      setTimeout(() => { e.target.textContent = `⧉ copy ${qlabel}`; }, 1400);
     });
   });
 }
@@ -610,13 +622,13 @@ async function send(text) {
             `turn ${data.turn} — ${data.status}`;
           scroll();
         } else if (eventType === 'sql') {
-          stepsEl.appendChild(makeLiveStep('sql', data.sql, `${data.rows} rows · ${data.elapsed_ms}ms`));
+          stepsEl.appendChild(makeLiveStep('sql', data.query ?? data.sql, `${data.rows} rows · ${data.elapsed_ms}ms`));
           scroll();
         } else if (eventType === 'blocked') {
-          stepsEl.appendChild(makeLiveStep('blocked', data.sql, data.reason));
+          stepsEl.appendChild(makeLiveStep('blocked', data.query ?? data.sql, data.reason));
           scroll();
         } else if (eventType === 'error') {
-          stepsEl.appendChild(makeLiveStep('error', data.sql, data.detail));
+          stepsEl.appendChild(makeLiveStep('error', data.query ?? data.sql, data.detail));
           scroll();
         } else if (eventType === 'done') {
           finalData = data;

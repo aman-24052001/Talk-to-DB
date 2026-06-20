@@ -45,6 +45,29 @@ _PLANNER_MAX_TOKENS = 300
 _SYNTH_MAX_TOKENS = 800
 
 
+def _sse_hub(event: str, data: dict) -> str:
+    """Format one SSE frame for the multi-source stream."""
+    payload = dict(data, event=event)
+    return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def _parse_sse_frame(frame: str) -> tuple[str, dict]:
+    """Parse one SSE frame produced by QueryAgent.ask_stream back into
+    (event_name, data_dict). Best-effort — returns ("", {}) for frames
+    that don't carry a JSON data line."""
+    event = "message"
+    data: dict = {}
+    for line in frame.splitlines():
+        if line.startswith("event: "):
+            event = line[7:].strip()
+        elif line.startswith("data: "):
+            try:
+                data = json.loads(line[6:])
+            except json.JSONDecodeError:
+                data = {}
+    return event, data
+
+
 @dataclass
 class SourceAnswer:
     name: str
@@ -199,3 +222,113 @@ class Hub:
             answer=final_answer, planned_sources=chosen, sources=ordered,
             elapsed_ms=int((time.perf_counter() - start) * 1000),
         )
+
+    # ── streaming ────────────────────────────────────────────────────────
+    def ask_stream(self, question: str, history: list[dict] | None = None):
+        """SSE generator for multi-source mode.
+
+        The hard part the single-source streamer doesn't face: N agents
+        produce events concurrently, so "whose event fires when?" has no
+        natural order. Resolution here: each source runs in its own thread
+        and pushes its raw SSE frames — re-tagged with a `source` field —
+        into one shared queue; the main generator drains that queue and
+        forwards frames in arrival order. So the client sees genuinely
+        interleaved progress (source A's query, then source B's block,
+        then source A's answer…), each frame labelled with which source
+        it came from.
+
+        Event sequence:
+          plan          — {sources: [...]}  which sources were chosen
+          source_start  — {source}          a source's agent began
+          (forwarded single-source frames, each with an added `source` key:
+           thinking | sql | blocked | error)
+          source_done   — {source, answer, query, row_count, error}
+          synthesizing  — {} (only if 2+ sources succeeded)
+          done          — {answer, planned_sources, sources:[...], elapsed_ms}
+          err           — fatal hub-level error
+        """
+        import queue as _queue
+
+        start = time.perf_counter()
+        try:
+            chosen = self.plan(question)
+            yield _sse_hub("plan", {"sources": chosen})
+
+            q: _queue.Queue = _queue.Queue()
+            results: dict[str, SourceAnswer] = {}
+
+            def run_source(name: str):
+                agent = self._agents[name]
+                final_done: dict | None = None
+                try:
+                    for frame in agent.ask_stream(question, history):
+                        event, data = _parse_sse_frame(frame)
+                        if event == "done":
+                            final_done = data
+                        elif event == "err":
+                            results[name] = SourceAnswer(
+                                name=name, error=data.get("detail", "agent error"))
+                            q.put(("source_frame", name, "error",
+                                   {"source": name, "detail": data.get("detail", "")}))
+                        elif event in ("thinking", "sql", "blocked", "error"):
+                            tagged = dict(data, source=name)
+                            q.put(("source_frame", name, event, tagged))
+                    if final_done is not None and name not in results:
+                        results[name] = SourceAnswer(
+                            name=name, answer=final_done.get("answer", ""),
+                            sql=final_done.get("query") or final_done.get("sql"),
+                            columns=final_done.get("columns", []),
+                            rows=final_done.get("rows", []),
+                            row_count=final_done.get("row_count", 0),
+                        )
+                except Exception as e:  # noqa: BLE001 — must isolate one source's failure
+                    log.warning("source '%s' stream failed", name, exc_info=True)
+                    results[name] = SourceAnswer(name=name, error=str(e))
+                finally:
+                    q.put(("source_complete", name, None, None))
+
+            pool = concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(chosen)))
+            for name in chosen:
+                yield _sse_hub("source_start", {"source": name})
+                pool.submit(run_source, name)
+
+            remaining = set(chosen)
+            while remaining:
+                kind, name, event, data = q.get()
+                if kind == "source_frame":
+                    yield _sse_hub(event, data)
+                elif kind == "source_complete":
+                    remaining.discard(name)
+                    src = results.get(name) or SourceAnswer(name=name, error="no result produced")
+                    results[name] = src
+                    yield _sse_hub("source_done", {
+                        "source": name, "answer": src.answer, "query": src.sql,
+                        "row_count": src.row_count, "error": src.error,
+                    })
+            pool.shutdown(wait=True)
+
+            ordered = [results[n] for n in chosen]
+            ok = [a for a in ordered if not a.error]
+            if len(ok) == 1 and len(ordered) == 1:
+                final_answer = ok[0].answer
+            elif not ok:
+                final_answer = "All queried sources failed: " + "; ".join(
+                    f"{a.name}: {a.error}" for a in ordered)
+            else:
+                yield _sse_hub("synthesizing", {})
+                final_answer = self._synthesize(question, ordered)
+
+            yield _sse_hub("done", {
+                "answer": final_answer,
+                "planned_sources": chosen,
+                "sources": [
+                    {"name": a.name, "answer": a.answer, "query": a.sql, "sql": a.sql,
+                     "columns": a.columns, "rows": a.rows, "row_count": a.row_count,
+                     "error": a.error}
+                    for a in ordered
+                ],
+                "elapsed_ms": int((time.perf_counter() - start) * 1000),
+            })
+        except Exception as e:  # noqa: BLE001 — surface fatal hub error as an SSE frame
+            log.exception("hub ask_stream error")
+            yield _sse_hub("err", {"detail": str(e)})

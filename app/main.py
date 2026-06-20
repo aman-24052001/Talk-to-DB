@@ -212,6 +212,34 @@ def ask_multi(request: Request, body: AskRequest):
     )
 
 
+@app.post("/api/ask/multi/stream", dependencies=[Depends(require_auth)])
+def ask_multi_stream(request: Request, body: AskRequest):
+    """SSE streaming variant of /api/ask/multi. Interleaves tagged progress
+    events from each source's agent as they arrive (each frame carries a
+    `source` field), bracketed by plan / source_start / source_done /
+    synthesizing / done events. Only available when config.sources is set."""
+    _check_rate(request)
+    hub = request.app.state.hub
+    if hub is None:
+        raise HTTPException(
+            status_code=400,
+            detail="This deployment isn't configured for multi-source mode. "
+                   "Set config.sources (2+ entries) to enable /api/ask/multi/stream.",
+        )
+
+    def generate():
+        try:
+            yield from hub.ask_stream(
+                body.question, [t.model_dump() for t in body.history]
+            )
+        except Exception as e:
+            log.exception("ask_multi_stream failed")
+            import json
+            yield f"event: err\ndata: {json.dumps({'detail': str(e)})}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
+
 @app.exception_handler(Exception)
 async def unhandled(request: Request, exc: Exception):
     log.exception("unhandled error")

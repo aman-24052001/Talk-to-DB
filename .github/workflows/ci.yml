@@ -50,3 +50,39 @@ jobs:
 
       - name: Run tests
         run: PYTHONPATH=. pytest tests/ -v --tb=short --no-header
+
+  mongo-integration:
+    name: Mongo integration (real mongod)
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand({ ping: 1 })' --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx
+
+      - name: Run Mongo integration tests against the live server
+        env:
+          # Presence of this var flips the mongo_integration tests from
+          # skipped (mongomock-only, as on the main `test` job) to running
+          # against the real mongod service above.
+          TALK_TO_DB_MONGO_URL: "mongodb://localhost:27017/talktodb_ci"
+        run: PYTHONPATH=. pytest tests/ -v --tb=short --no-header -m mongo_integration

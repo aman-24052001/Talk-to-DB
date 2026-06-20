@@ -103,7 +103,14 @@ each chosen source is queried in parallel by its own ordinary `QueryAgent`,
 and — only if 2+ sources actually answered — one more call composes a
 single answer citing which source supported which part. One source failing
 doesn't take the others down; the response says what broke and answers
-from what worked. No streaming variant yet for this endpoint.
+from what worked. A streaming variant (`/api/ask/multi/stream`) interleaves
+each source's live progress, every event tagged with which source it came
+from.
+
+> **Field naming:** responses carry both `query` (the backend-agnostic
+> name — literal SQL for SQL backends, a canonical JSON spec for Mongo) and
+> `sql` (a deprecated alias, kept so existing clients don't break). Prefer
+> `query`; `sql` will be removed in a future major version.
 
 ### Bundled Mongo demo
 
@@ -122,7 +129,7 @@ in multi-source mode has a real, joinable answer.
 | # | Layer | What it stops |
 |---|-------|---------------|
 | 1 | **Query firewall** — SQL: AST walk via `sqlglot` (single statement, SELECT-only roots, forbidden-node walk, function blocklist, table allowlist, forced `LIMIT`). Mongo: structural validation (operation must be `find`/`aggregate`, pipeline stages checked against an explicit allowlist, recursive scan for `$where`/`$function`/`$accumulator` at any nesting depth, collection allowlist, forced `$limit`) | `DROP`/`INSERT`/`UPDATE`/`DELETE`, multi-statement chains, `PRAGMA`/`ATTACH`/`SET`, `SELECT INTO`, `load_extension`/`pg_sleep`-class escapes; Mongo's `$out`/`$merge`/`$function`/`$where` equivalents; querying hidden tables/collections; runaway result sets |
-| 2 | **Read-only connection** — SQL: `PRAGMA query_only` (SQLite), `default_transaction_read_only` (Postgres), `SESSION TRANSACTION READ ONLY` (MySQL). Mongo: capability-narrowed wrapper — the connection object has no write methods to call, not just permission checks | any write that somehow got past layer 1 |
+| 2 | **Read-only connection** — SQL: `PRAGMA query_only` (SQLite), `default_transaction_read_only` (Postgres), `SESSION TRANSACTION READ ONLY` (MySQL). Mongo: capability-narrowed wrapper — the connection object has no write methods to call, not just permission checks — plus a startup probe (`connectionStatus`) that logs a warning if the connected user's credentials actually carry write privileges (turning "use a read-only role" from advice into a visible signal) | any write that somehow got past layer 1 |
 | 3 | **Execution guards** — server-side `statement_timeout` + wall-clock timeout, row cap with truncation flag, 400-char cell cap | long-running queries, memory blowups, huge blobs entering the LLM context |
 | 4 | **Agent budgets** — max turns, max 3 consecutive firewall blocks, capped tool-result size, capped history | infinite self-correction loops, token-burn, context flooding |
 | 5 | **Prompt-injection posture** — query results are wrapped as untrusted data and the model is instructed to ignore instructions inside them; since the only tool is firewalled read-only SQL, the blast radius of a poisoned row is a misleading sentence, not an action | malicious strings stored in your tables |
@@ -154,17 +161,21 @@ bearer token, rate limit, audit path.
 | `/api/schema` | GET | introspected schema (`?refresh=1` busts cache) |
 | `/api/ask` | POST | `{question, history[]}` → answer + SQL + rows + guardrail stamps (blocking; 400 if `config.sources` is set) |
 | `/api/ask/stream` | POST | same input, **Server-Sent Events** response — emits `thinking` / `sql` / `blocked` / `error` / `done` / `err` events as the agent works, so the UI can show live progress instead of waiting on one big response |
-| `/api/ask/multi` | POST | multi-source only (400 unless `config.sources` has 2+ entries) — `{question, history[]}` → one synthesized answer + a per-source breakdown (answer/sql/rows/error for each) |
+| `/api/ask/multi` | POST | multi-source only (400 unless `config.sources` has 2+ entries) — `{question, history[]}` → one synthesized answer + a per-source breakdown (answer/query/rows/error for each) |
+| `/api/ask/multi/stream` | POST | multi-source SSE variant — interleaves each source's progress events (every frame tagged with its `source`), bracketed by `plan` / `source_start` / `source_done` / `synthesizing` / `done` |
 
 ## Tests
 
 ```bash
-python -m pytest tests/ -q     # 100 tests: SQL firewall + Mongo firewall, RO
+python -m pytest tests/ -q     # 111 tests: SQL firewall + Mongo firewall, RO
                                 # enforcement for both, schema introspection,
-                                # SSE streaming, full E2E flow for both
-                                # backends, the multi-source Hub (planner/
-                                # fan-out/synthesis/partial-failure), and the
-                                # bundled Mongo demo
+                                # SSE streaming (single + multi-source), full
+                                # E2E flow for both backends, the multi-source
+                                # Hub (planner/fan-out/synthesis/partial-failure),
+                                # the bundled Mongo demo, and Mongo RBAC checks.
+                                # +3 real-mongod integration tests, skipped
+                                # unless TALK_TO_DB_MONGO_URL is set (CI runs
+                                # them against a mongo:7 service container).
 ```
 
 ## Docker
