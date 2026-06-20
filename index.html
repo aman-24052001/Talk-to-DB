@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Talk-to-DB — Live Demo</title>
+<title>Talk-to-DB — Ask your data in plain English</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -210,6 +210,51 @@ footer{
   .step:last-child{border-bottom:none}
   .ls-sql{max-width:180px}
 }
+
+/* ── additions for NL-first demo ── */
+.flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;border:var(--bw) solid var(--ink);box-shadow:var(--sh);background:var(--card)}
+.flow-step{flex:1;min-width:150px;padding:18px 16px;border-right:2px solid var(--ink);position:relative}
+.flow-step:last-child{border-right:none}
+.flow-step.io{background:var(--yellow)}
+.flow-step.sys{background:var(--card)}
+.flow-ic{font-size:22px;margin-bottom:8px}
+.flow-t{font-family:'Archivo Black';font-size:13px;margin-bottom:5px;letter-spacing:-.2px}
+.flow-b{font-size:12.5px;line-height:1.5;opacity:.78}
+.flow-tag{font-family:'JetBrains Mono';font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;opacity:.5;margin-bottom:7px}
+
+/* answer-first card body */
+.ans-big{padding:18px 18px 16px;font-size:16px;line-height:1.6;background:var(--card)}
+.ans-big strong{background:var(--yellow);padding:0 3px}
+.ans-big.multi strong{background:#E9DCFF}
+.proof{border-top:2px solid var(--ink)}
+.proof summary{
+  font-family:'JetBrains Mono';font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+  padding:9px 18px;cursor:pointer;background:#FAFAF5;list-style:none;user-select:none;display:flex;align-items:center;gap:8px;
+}
+.proof summary::-webkit-details-marker{display:none}
+.proof summary::before{content:'▸';font-size:11px;transition:transform .15s}
+.proof[open] summary::before{transform:rotate(90deg)}
+.proof summary:hover{background:#F2EFE3}
+.proof-body{border-top:2px solid var(--ink)}
+.qbox{background:#1a1a2e;padding:13px 18px}
+.q-lbl{font-family:'JetBrains Mono';font-size:9px;font-weight:700;letter-spacing:1.5px;color:#666;text-transform:uppercase;margin-bottom:7px;display:flex;gap:8px;align-items:center}
+.q-lbl .badge{background:#2F6BFF;color:#fff;padding:1px 6px;border-radius:0;font-size:8px}
+.q-lbl .badge.mongo{background:#00C16A}
+.q-code{font-family:'JetBrains Mono';font-size:12px;color:#d0d0ff;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+.src-split{display:flex;flex-wrap:wrap}
+.src-col{flex:1;min-width:240px;border-right:2px solid var(--ink)}
+.src-col:last-child{border-right:none}
+.src-hd{font-family:'JetBrains Mono';font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:7px 14px;border-bottom:2px solid var(--ink);display:flex;gap:7px;align-items:center}
+.src-hd .dot{width:8px;height:8px;border-radius:50%}
+.src-hd .dot.sql{background:#2F6BFF}
+.src-hd .dot.mongo{background:#00C16A}
+.src-ans{padding:11px 14px;font-size:13px;line-height:1.5}
+@media(max-width:700px){
+  .flow-step{border-right:none;border-bottom:2px solid var(--ink)}
+  .flow-step:last-child{border-bottom:none}
+  .src-col{border-right:none;border-bottom:2px solid var(--ink)}
+  .sec-grid{grid-template-columns:1fr !important}
+}
 </style>
 </head>
 <body>
@@ -220,429 +265,269 @@ footer{
   <span class="logo-text">TALK-TO<em>DB</em></span>
   <div class="nav-sp"></div>
   <div class="nav-links">
-    <a href="#demo" class="npill">Demo</a>
+    <a href="#how" class="npill">How</a>
+    <a href="#demo" class="npill">Examples</a>
+    <a href="#multi" class="npill">Multi-source</a>
     <a href="#security" class="npill">Security</a>
-    <a href="#schema" class="npill">Schema</a>
     <a href="https://github.com/aman-24052001/Talk-to-DB" class="npill cta" target="_blank">GitHub →</a>
   </div>
 </nav>
 
 <!-- HERO -->
 <div class="hero">
-  <span class="kicker">v3 · Demo Showcase</span>
-  <h1>Ask your<br>database<br><span class="y">anything.</span></h1>
-  <p class="sub">Plain English in. Guarded SQL out. Real answers — always with the exact query that ran, every guardrail stamp, and every agent step visible.</p>
+  <span class="kicker">v3 · SQL + MongoDB · multi-source</span>
+  <h1>Ask your<br>data in<br><span class="y">plain English.</span></h1>
+  <p class="sub">You ask a question in natural language. The agent figures out the query, a firewall checks it's safe, a read-only connection runs it — and you get a plain-English answer back. The exact query and rows are there too, but only if you want to look.</p>
   <div class="hero-cta">
-    <a href="#demo" class="btn dark">See 9 live demos ↓</a>
+    <a href="#demo" class="btn dark">See real examples ↓</a>
     <a href="https://github.com/aman-24052001/Talk-to-DB" class="btn light" target="_blank">GitHub</a>
   </div>
   <div class="stats">
-    <div class="stat"><div class="stat-n">5</div><div class="stat-l">Tables</div></div>
-    <div class="stat"><div class="stat-n">4,091</div><div class="stat-l">Total rows</div></div>
+    <div class="stat"><div class="stat-n">2</div><div class="stat-l">DB engines</div></div>
+    <div class="stat"><div class="stat-n">SQL+NoSQL</div><div class="stat-l">together</div></div>
     <div class="stat"><div class="stat-n">2</div><div class="stat-l">Firewall layers</div></div>
-    <div class="stat"><div class="stat-n">36</div><div class="stat-l">Tests passing</div></div>
+    <div class="stat"><div class="stat-n">111</div><div class="stat-l">Tests passing</div></div>
     <div class="stat"><div class="stat-n">0</div><div class="stat-l">Write access</div></div>
   </div>
 </div>
 
 <!-- HOW IT WORKS -->
-<div class="section">
+<div class="section" id="how">
 <div class="wrap">
-  <div class="eyebrow">How it works</div>
-  <h2>Question → guarded SQL → answer</h2>
-  <div class="steps">
-    <div class="step"><div class="step-n">01</div><div class="step-t">You ask</div><div class="step-b">Plain English. No SQL. Multi-turn conversation keeps context across questions.</div></div>
-    <div class="step"><div class="step-n">02</div><div class="step-t">Claude writes SQL</div><div class="step-b">Live schema + 7 few-shot examples guide the agent to the correct join paths and formulas.</div></div>
-    <div class="step"><div class="step-n">03</div><div class="step-t">AST firewall</div><div class="step-b">sqlglot parses every statement. Single SELECT? No forbidden nodes? Tables in schema? LIMIT enforced?</div></div>
-    <div class="step"><div class="step-n">04</div><div class="step-t">Read-only session</div><div class="step-b">Even if something passes the AST, the DB session is physically read-only at the driver level.</div></div>
-    <div class="step"><div class="step-n">05</div><div class="step-t">You see everything</div><div class="step-b">Answer, exact SQL, row count, guardrail stamps, agent turns, elapsed time. Full transparency.</div></div>
-    <div class="step"><div class="step-n">06</div><div class="step-t">SSE streaming</div><div class="step-b">Real-time events per agent step — thinking, SQL attempt, firewall result — no silent waiting.</div></div>
+  <div class="eyebrow">The whole idea</div>
+  <h2>Natural language in → natural language out</h2>
+  <p class="lead">You never touch a query. You ask like you'd ask a colleague; the machinery in the middle stays out of your way — but it's all there, on the record, if you want to audit it.</p>
+  <div class="flow">
+    <div class="flow-step io">
+      <div class="flow-tag">You</div>
+      <div class="flow-ic">💬</div>
+      <div class="flow-t">Ask in English</div>
+      <div class="flow-b">"Which brand makes us the most money?" No schema knowledge, no query syntax.</div>
+    </div>
+    <div class="flow-step sys">
+      <div class="flow-tag">System</div>
+      <div class="flow-ic">⚙️</div>
+      <div class="flow-t">Writes the query</div>
+      <div class="flow-b">The agent reads the live schema and writes SQL — or a Mongo pipeline — to fetch exactly what's needed.</div>
+    </div>
+    <div class="flow-step sys">
+      <div class="flow-tag">System</div>
+      <div class="flow-ic">🛡️</div>
+      <div class="flow-t">Checks &amp; runs it</div>
+      <div class="flow-b">Firewall validates the query, a read-only connection executes it, results come back as rows or numbers.</div>
+    </div>
+    <div class="flow-step io">
+      <div class="flow-tag">You</div>
+      <div class="flow-ic">✅</div>
+      <div class="flow-t">Get a real answer</div>
+      <div class="flow-b">A plain-English sentence with the actual figure in it — plus the query and raw data, one click away.</div>
+    </div>
   </div>
 </div>
 </div>
 
-<!-- DEMO CONVERSATIONS -->
+<!-- DEMO EXAMPLES -->
 <div class="section" id="demo">
 <div class="wrap">
-  <div class="eyebrow">Demo conversations</div>
-  <h2>9 real questions. Real data. Real SQL.</h2>
-  <p class="lead">Every number below came from an actual query against the demo database. Nothing is mocked.</p>
+  <div class="eyebrow">Real examples</div>
+  <h2>You ask. You get a sentence back.</h2>
+  <p class="lead">Each card leads with the question and the natural-language answer — exactly what you'd see. The query the system wrote and the raw rows it got are tucked under "show how it got there", because most of the time you don't need them.</p>
 
   <div class="convos">
 
-    <!-- 1 -->
+    <!-- 1: simple SQL -->
     <div class="convo">
-      <div class="convo-hdr"><span>Demo 1 — Simple Aggregate</span><span class="tag basic">Basic</span></div>
-      <div class="msg-u"><span class="who">You</span><span class="msg-t">What is the total revenue from completed orders?</span></div>
-      <div class="msg-b">
-        <div class="lsteps">
-          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
-          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT ROUND(SUM(oi.quantity * oi.unit_price), 2) AS total_revenue FROM order_items oi JOIN orders o…</span></div>
-        </div>
-        <div class="answer">Total revenue from completed orders is <strong>₹30,06,110.00</strong>.</div>
-        <div class="stamps">
-          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
-          <span class="stamp meta">1 row</span><span class="stamp meta">1 turn</span><span class="stamp meta">42ms</span>
-        </div>
-        <div class="sqlwrap">
-          <div class="sql-lbl">SQL executed</div>
-          <div class="sql-code">SELECT ROUND(SUM(oi.quantity * oi.unit_price), 2) AS total_revenue
+      <div class="convo-hdr"><span>SQL · simple lookup</span><span class="tag basic">Basic</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">What's our total revenue from completed orders?</span></div>
+      <div class="ans-big">Your completed orders have brought in <strong>₹30,06,110</strong> in total revenue.</div>
+      <details class="proof"><summary>show how it got there</summary>
+        <div class="proof-body">
+          <div class="qbox">
+            <div class="q-lbl"><span class="badge">SQL</span> the query the agent wrote</div>
+            <div class="q-code">SELECT ROUND(SUM(oi.quantity * oi.unit_price), 2) AS total_revenue
 FROM order_items oi
 JOIN orders o ON oi.order_id = o.order_id
 WHERE o.status = 'completed'
 LIMIT 200</div>
+          </div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>total_revenue</th></tr></thead>
+            <tbody><tr><td class="n">3006110.0</td></tr></tbody>
+          </table></div>
+          <div class="stamps">
+            <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
+            <span class="stamp meta">1 row</span><span class="stamp meta">1 turn</span>
+          </div>
         </div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>total_revenue</th></tr></thead>
-          <tbody><tr><td class="n">3006110.0</td></tr></tbody>
-        </table></div>
-      </div>
+      </details>
     </div>
 
-    <!-- 2 -->
+    <!-- 2: ranked SQL join -->
     <div class="convo">
-      <div class="convo-hdr"><span>Demo 2 — Revenue by Brand (Ranked)</span><span class="tag hard">3-table JOIN</span></div>
-      <div class="msg-u"><span class="who">You</span><span class="msg-t">Which brands are generating the most revenue from completed orders? Rank all of them.</span></div>
-      <div class="msg-b">
-        <div class="lsteps">
-          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
-          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT t.brand, ROUND(SUM(oi.quantity * oi.unit_price),2) AS revenue FROM order_items oi JOIN orders o JOIN t_shirts t…</span></div>
-        </div>
-        <div class="answer">Van Heusen leads with <strong>₹8,59,065</strong>, followed by Adidas (₹6,38,620) and Puma (₹6,19,353). Nike and Levi round out the ranking.</div>
-        <div class="stamps">
-          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
-          <span class="stamp meta">5 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">38ms</span>
-        </div>
-        <div class="sqlwrap">
-          <div class="sql-lbl">SQL executed</div>
-          <div class="sql-code">SELECT t.brand,
-       ROUND(SUM(oi.quantity * oi.unit_price), 2) AS revenue
+      <div class="convo-hdr"><span>SQL · 3-table join, ranked</span><span class="tag hard">Harder</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">Which brand makes us the most money? Rank them.</span></div>
+      <div class="ans-big"><strong>Van Heusen</strong> is your top earner at ₹8.59L from completed orders, followed by Adidas (₹6.39L) and Puma (₹6.19L). Nike (₹5.24L) and Levi (₹3.65L) round out the five.</div>
+      <details class="proof"><summary>show how it got there</summary>
+        <div class="proof-body">
+          <div class="qbox">
+            <div class="q-lbl"><span class="badge">SQL</span> the query the agent wrote</div>
+            <div class="q-code">SELECT t.brand, ROUND(SUM(oi.quantity * oi.unit_price), 2) AS revenue
 FROM order_items oi
-JOIN orders   o ON oi.order_id   = o.order_id
+JOIN orders o   ON oi.order_id = o.order_id
 JOIN t_shirts t ON oi.t_shirt_id = t.t_shirt_id
 WHERE o.status = 'completed'
 GROUP BY t.brand
 ORDER BY revenue DESC
 LIMIT 200</div>
-        </div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>brand</th><th>revenue</th></tr></thead>
-          <tbody>
-            <tr><td>Van Heusen</td><td class="n">859065.0</td></tr>
-            <tr><td>Adidas</td><td class="n">638620.0</td></tr>
-            <tr><td>Puma</td><td class="n">619353.0</td></tr>
-            <tr><td>Nike</td><td class="n">524439.0</td></tr>
-            <tr><td>Levi</td><td class="n">364633.0</td></tr>
-          </tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- 3 -->
-    <div class="convo">
-      <div class="convo-hdr"><span>Demo 3 — Monthly Revenue 2025</span><span class="tag hard">Date handling</span></div>
-      <div class="msg-u"><span class="who">You</span><span class="msg-t">Show me monthly revenue and order count for all of 2025.</span></div>
-      <div class="msg-b">
-        <div class="lsteps">
-          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
-          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT strftime('%Y-%m', o.order_date) AS month, ROUND(SUM(oi.quantity*oi.unit_price),2) AS revenue…</span></div>
-        </div>
-        <div class="answer">Revenue grew consistently through 2025, peaking in <strong>July at ₹2,84,268</strong> across 101 orders. December was the highest month by year-end at ₹3,31,791.</div>
-        <div class="stamps">
-          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
-          <span class="stamp meta">12 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">51ms</span>
-        </div>
-        <div class="sqlwrap">
-          <div class="sql-lbl">SQL executed</div>
-          <div class="sql-code">SELECT strftime('%Y-%m', o.order_date) AS month,
-       ROUND(SUM(oi.quantity * oi.unit_price), 2) AS revenue,
-       COUNT(DISTINCT o.order_id) AS orders
-FROM orders      o
-JOIN order_items oi ON oi.order_id = o.order_id
-WHERE o.status = 'completed'
-  AND o.order_date BETWEEN '2025-01-01' AND '2025-12-31'
-GROUP BY month
-ORDER BY month
-LIMIT 200</div>
-        </div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>month</th><th>revenue</th><th>orders</th></tr></thead>
-          <tbody>
-            <tr><td>2025-01</td><td class="n">10183.0</td><td class="n">5</td></tr>
-            <tr><td>2025-02</td><td class="n">39439.0</td><td class="n">22</td></tr>
-            <tr><td>2025-03</td><td class="n">35947.0</td><td class="n">15</td></tr>
-            <tr><td>2025-04</td><td class="n">92551.0</td><td class="n">47</td></tr>
-            <tr><td>2025-05</td><td class="n">117309.0</td><td class="n">52</td></tr>
-            <tr><td>2025-06</td><td class="n">134971.0</td><td class="n">56</td></tr>
-            <tr><td>2025-07</td><td class="n">284268.0</td><td class="n">101</td></tr>
-            <tr><td>2025-08</td><td class="n">168032.0</td><td class="n">77</td></tr>
-            <tr><td>2025-09</td><td class="n">212876.0</td><td class="n">95</td></tr>
-            <tr><td>2025-10</td><td class="n">248800.0</td><td class="n">106</td></tr>
-            <tr><td>2025-11</td><td class="n">266560.0</td><td class="n">109</td></tr>
-            <tr><td>2025-12</td><td class="n">331791.0</td><td class="n">148</td></tr>
-          </tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- 4 -->
-    <div class="convo">
-      <div class="convo-hdr"><span>Demo 4 — Discounted Stock Value</span><span class="tag hard">LEFT JOIN + COALESCE</span></div>
-      <div class="msg-u"><span class="who">You</span><span class="msg-t">What is the total stock value of each brand after applying their discounts?</span></div>
-      <div class="msg-b">
-        <div class="lsteps">
-          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
-          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT t.brand, ROUND(SUM(t.price*(1-COALESCE(d.pct_discount,0)/100)*t.stock_quantity),2)…</span></div>
-        </div>
-        <div class="answer">Adidas holds the highest discounted stock value at <strong>₹6,94,394</strong>. Nike is lowest at ₹4,78,471. Note: only 29 of 89 shirts carry a discount (averaging 14.1%), so most use COALESCE to default to 0%.</div>
-        <div class="stamps">
-          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
-          <span class="stamp meta">5 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">29ms</span>
-        </div>
-        <div class="sqlwrap">
-          <div class="sql-lbl">SQL executed</div>
-          <div class="sql-code">SELECT t.brand,
-       ROUND(
-         SUM(t.price * (1 - COALESCE(d.pct_discount, 0) / 100) * t.stock_quantity),
-         2
-       ) AS discounted_stock_value
-FROM t_shirts  t
-LEFT JOIN discounts d ON t.t_shirt_id = d.t_shirt_id
-GROUP BY t.brand
-ORDER BY discounted_stock_value DESC
-LIMIT 200</div>
-        </div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>brand</th><th>discounted_stock_value</th></tr></thead>
-          <tbody>
-            <tr><td>Adidas</td><td class="n">694393.9</td></tr>
-            <tr><td>Puma</td><td class="n">626331.4</td></tr>
-            <tr><td>Van Heusen</td><td class="n">616120.1</td></tr>
-            <tr><td>Levi</td><td class="n">493588.35</td></tr>
-            <tr><td>Nike</td><td class="n">478470.55</td></tr>
-          </tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- 5 -->
-    <div class="convo">
-      <div class="convo-hdr"><span>Demo 5 — Top Customers by Spend</span><span class="tag hard">4-table JOIN</span></div>
-      <div class="msg-u"><span class="who">You</span><span class="msg-t">Who are our top 5 customers by total spend on completed orders? Include their city.</span></div>
-      <div class="msg-b">
-        <div class="lsteps">
-          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
-          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT c.name, c.city, ROUND(SUM(oi.quantity*oi.unit_price),2) AS total_spend FROM customers c JOIN orders o JOIN order_items…</span></div>
-        </div>
-        <div class="answer">Anita Nair from Mumbai leads with <strong>₹35,645</strong>, followed by Priya Patel (Chennai ₹34,654) and Pooja Patel (Hyderabad ₹32,651).</div>
-        <div class="stamps">
-          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
-          <span class="stamp meta">5 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">44ms</span>
-        </div>
-        <div class="sqlwrap">
-          <div class="sql-lbl">SQL executed</div>
-          <div class="sql-code">SELECT c.name, c.city,
-       ROUND(SUM(oi.quantity * oi.unit_price), 2) AS total_spend
-FROM customers   c
-JOIN orders      o  ON o.customer_id  = c.customer_id
-JOIN order_items oi ON oi.order_id    = o.order_id
-WHERE o.status = 'completed'
-GROUP BY c.customer_id, c.name, c.city
-ORDER BY total_spend DESC
-LIMIT 5</div>
-        </div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>name</th><th>city</th><th>total_spend</th></tr></thead>
-          <tbody>
-            <tr><td>Anita Nair</td><td>Mumbai</td><td class="n">35645.0</td></tr>
-            <tr><td>Priya Patel</td><td>Chennai</td><td class="n">34654.0</td></tr>
-            <tr><td>Pooja Patel</td><td>Hyderabad</td><td class="n">32651.0</td></tr>
-            <tr><td>Kavya Reddy</td><td>Bengaluru</td><td class="n">30862.0</td></tr>
-            <tr><td>Karan Verma</td><td>Mumbai</td><td class="n">28857.0</td></tr>
-          </tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- 6 -->
-    <div class="convo">
-      <div class="convo-hdr"><span>Demo 6 — Quarter Comparison</span><span class="tag hard">CASE WHEN + date ranges</span></div>
-      <div class="msg-u"><span class="who">You</span><span class="msg-t">Compare Q4 2025 vs Q1 2026 — orders and revenue side by side.</span></div>
-      <div class="msg-b">
-        <div class="lsteps">
-          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
-          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT CASE WHEN o.order_date BETWEEN '2025-10-01' AND '2025-12-31' THEN 'Q4-2025'…</span></div>
-        </div>
-        <div class="answer">Q4 2025 had higher revenue (<strong>₹8,47,151</strong>) while Q1 2026 had more orders (371 vs 363). Average order value was slightly lower in Q1 2026.</div>
-        <div class="stamps">
-          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
-          <span class="stamp meta">2 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">33ms</span>
-        </div>
-        <div class="sqlwrap">
-          <div class="sql-lbl">SQL executed</div>
-          <div class="sql-code">SELECT
-  CASE
-    WHEN o.order_date BETWEEN '2025-10-01' AND '2025-12-31' THEN 'Q4-2025'
-    WHEN o.order_date BETWEEN '2026-01-01' AND '2026-03-31' THEN 'Q1-2026'
-  END AS quarter,
-  COUNT(DISTINCT o.order_id) AS orders,
-  ROUND(SUM(oi.quantity * oi.unit_price), 2) AS revenue
-FROM orders      o
-JOIN order_items oi ON oi.order_id = o.order_id
-WHERE o.status = 'completed'
-  AND o.order_date BETWEEN '2025-10-01' AND '2026-03-31'
-GROUP BY quarter
-ORDER BY quarter
-LIMIT 200</div>
-        </div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>quarter</th><th>orders</th><th>revenue</th></tr></thead>
-          <tbody>
-            <tr><td>Q1-2026</td><td class="n">371</td><td class="n">825663.0</td></tr>
-            <tr><td>Q4-2025</td><td class="n">363</td><td class="n">847151.0</td></tr>
-          </tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- 7 -->
-    <div class="convo">
-      <div class="convo-hdr"><span>Demo 7 — Agent Self-Corrects After Block</span><span class="tag multi">2 turns · auto-retry</span></div>
-      <div class="msg-u"><span class="who">You</span><span class="msg-t">What are the top 5 best-selling sizes by units sold across completed orders?</span></div>
-      <div class="msg-b">
-        <div class="lsteps">
-          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
-          <div class="ls blk">⊘ &nbsp;blocked — SELECT INTO not permitted (tried to write temp table)</div>
-          <div class="ls thinking">◌ &nbsp;turn 2 — reads rejection reason, rewrites query…</div>
-          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT t.size, SUM(oi.quantity) AS units_sold FROM order_items oi JOIN t_shirts t JOIN orders o…</span></div>
-        </div>
-        <div class="answer">XS is the best seller at <strong>1,103 units</strong>, followed by S (1,033) and XL (963). M is the slowest at 838 units.</div>
-        <div class="stamps">
-          <span class="stamp ok">✓ firewall pass</span>
-          <span class="stamp blk">⊘ 1 blocked</span>
-          <span class="stamp ok">⛨ read-only</span>
-          <span class="stamp meta">5 rows</span><span class="stamp meta">2 turns</span><span class="stamp meta">3.2s</span>
-        </div>
-        <div class="blk-wrap">
-          <div class="blk-card">
-            <div class="blk-head">⊘ Turn 1 — blocked by AST firewall</div>
-            <div class="blk-sql">SELECT t.size, SUM(oi.quantity) AS units INTO #temp FROM …</div>
-            <div class="blk-reason">Forbidden operation in query: Into. Only pure read-only SELECTs permitted. → Agent retried.</div>
+          </div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>brand</th><th>revenue</th></tr></thead>
+            <tbody>
+              <tr><td>Van Heusen</td><td class="n">859065.0</td></tr>
+              <tr><td>Adidas</td><td class="n">638620.0</td></tr>
+              <tr><td>Puma</td><td class="n">619353.0</td></tr>
+              <tr><td>Nike</td><td class="n">524439.0</td></tr>
+              <tr><td>Levi</td><td class="n">364633.0</td></tr>
+            </tbody>
+          </table></div>
+          <div class="stamps">
+            <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
+            <span class="stamp meta">5 rows</span><span class="stamp meta">1 turn</span>
           </div>
         </div>
-        <div class="sqlwrap">
-          <div class="sql-lbl">SQL executed (turn 2 — self-corrected)</div>
-          <div class="sql-code">SELECT t.size,
-       SUM(oi.quantity) AS units_sold
+      </details>
+    </div>
+
+    <!-- 3: Mongo -->
+    <div class="convo">
+      <div class="convo-hdr"><span>MongoDB · aggregation</span><span class="tag ops">NoSQL</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">How are customers rating our products overall?</span></div>
+      <div class="ans-big">Across <strong>102 reviews</strong>, products average a <strong>3.46 out of 5</strong> rating — decent, but with clear room to improve. The spread is wide, so it's worth looking at which products are dragging the average down.</div>
+      <details class="proof"><summary>show how it got there</summary>
+        <div class="proof-body">
+          <div class="qbox">
+            <div class="q-lbl"><span class="badge mongo">MONGO</span> the pipeline the agent wrote</div>
+            <div class="q-code">db.product_reviews.aggregate([
+  { "$group": {
+      "_id": null,
+      "avg_rating": { "$avg": "$rating" },
+      "total": { "$sum": 1 }
+  } },
+  { "$limit": 200 }
+])</div>
+          </div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>avg_rating</th><th>total</th></tr></thead>
+            <tbody><tr><td class="n">3.46</td><td class="n">102</td></tr></tbody>
+          </table></div>
+          <div class="stamps">
+            <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
+            <span class="stamp meta">1 doc</span><span class="stamp meta">1 turn</span>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <!-- 4: Mongo sparse field -->
+    <div class="convo">
+      <div class="convo-hdr"><span>MongoDB · schemaless data</span><span class="tag ops">NoSQL</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">How many support tickets are still open, and are any high priority?</span></div>
+      <div class="ans-big">You have <strong>12 open tickets</strong> out of 40 total. Just <strong>one</strong> is flagged high priority — though note that not every ticket carries a priority field at all, so a few open ones are simply unclassified.</div>
+      <details class="proof"><summary>show how it got there</summary>
+        <div class="proof-body">
+          <div class="qbox">
+            <div class="q-lbl"><span class="badge mongo">MONGO</span> the pipeline the agent wrote</div>
+            <div class="q-code">db.support_tickets.aggregate([
+  { "$match": { "status": "open" } },
+  { "$group": {
+      "_id": "$priority",
+      "count": { "$sum": 1 }
+  } },
+  { "$limit": 200 }
+])</div>
+          </div>
+          <div class="tbl-wrap"><table>
+            <thead><tr><th>priority</th><th>count</th></tr></thead>
+            <tbody>
+              <tr><td>high</td><td class="n">1</td></tr>
+              <tr><td>medium</td><td class="n">4</td></tr>
+              <tr><td>low</td><td class="n">3</td></tr>
+              <tr><td><span class="nul">∅ (none set)</span></td><td class="n">4</td></tr>
+            </tbody>
+          </table></div>
+          <div class="stamps">
+            <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
+            <span class="stamp meta">4 docs</span><span class="stamp meta">1 turn</span>
+          </div>
+        </div>
+      </details>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- MULTI-SOURCE -->
+<div class="section" id="multi">
+<div class="wrap">
+  <div class="eyebrow">Multi-source</div>
+  <h2>One question. Two databases. One answer.</h2>
+  <p class="lead">Your sales sit in SQL. Your reviews live in MongoDB. You shouldn't have to know that. Ask one question — a planner decides which sources it needs, queries them in parallel, and a synthesizer writes you a single answer that draws on both.</p>
+
+  <div class="convos">
+    <div class="convo">
+      <div class="convo-hdr"><span>SQL + MongoDB · synthesized</span><span class="tag multi">Multi-source</span></div>
+      <div class="msg-u"><span class="who">You</span><span class="msg-t">Our top-earning brand — are customers actually happy with it?</span></div>
+      <div class="ans-big multi">Not as much as you'd hope. <strong>Van Heusen</strong> is your highest-revenue brand (₹8.59L), but its <strong>3.4-star</strong> average rating is only middle-of-the-pack. The real outlier is <strong>Levi</strong> — lowest revenue <em>and</em> the worst reviews at 2.33 stars. Nike and Puma quietly have your happiest customers (3.65) despite earning less.</div>
+      <details class="proof"><summary>show how it got there — two sources, in parallel</summary>
+        <div class="proof-body">
+          <div class="src-split">
+            <div class="src-col">
+              <div class="src-hd"><span class="dot sql"></span>shop_sql · revenue by brand</div>
+              <div class="qbox">
+                <div class="q-lbl"><span class="badge">SQL</span></div>
+                <div class="q-code">SELECT t.brand,
+       SUM(oi.quantity*oi.unit_price) AS revenue
 FROM order_items oi
-JOIN t_shirts    t ON oi.t_shirt_id = t.t_shirt_id
-JOIN orders      o ON oi.order_id   = o.order_id
+JOIN orders o   ON oi.order_id = o.order_id
+JOIN t_shirts t ON oi.t_shirt_id = t.t_shirt_id
 WHERE o.status = 'completed'
-GROUP BY t.size
-ORDER BY units_sold DESC
-LIMIT 5</div>
+GROUP BY t.brand</div>
+              </div>
+              <div class="src-ans">Van Heusen ₹8.59L · Adidas ₹6.39L · Puma ₹6.19L · Nike ₹5.24L · Levi ₹3.65L</div>
+            </div>
+            <div class="src-col">
+              <div class="src-hd"><span class="dot mongo"></span>shop_reviews · ratings by brand</div>
+              <div class="qbox">
+                <div class="q-lbl"><span class="badge mongo">MONGO</span></div>
+                <div class="q-code">db.product_reviews.aggregate([
+  { "$group": {
+      "_id": "$t_shirt_id",
+      "avg": { "$avg": "$rating" },
+      "n": { "$sum": 1 }
+  } }
+])
+// joined to brand via t_shirt_id
+// by the synthesizer</div>
+              </div>
+              <div class="src-ans">Nike 3.65 · Puma 3.64 · Adidas 3.55 · Van Heusen 3.40 · Levi 2.33</div>
+            </div>
+          </div>
+          <div class="stamps">
+            <span class="stamp ok">✓ both sources firewalled</span><span class="stamp ok">⛨ read-only</span>
+            <span class="stamp meta">queried in parallel</span><span class="stamp meta">2 sources</span><span class="stamp meta">1 synthesis</span>
+          </div>
         </div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>size</th><th>units_sold</th></tr></thead>
-          <tbody>
-            <tr><td>XS</td><td class="n">1103</td></tr>
-            <tr><td>S</td><td class="n">1033</td></tr>
-            <tr><td>XL</td><td class="n">963</td></tr>
-            <tr><td>L</td><td class="n">853</td></tr>
-            <tr><td>M</td><td class="n">838</td></tr>
-          </tbody>
-        </table></div>
-      </div>
+      </details>
     </div>
+  </div>
 
-    <!-- 8 -->
-    <div class="convo">
-      <div class="convo-hdr"><span>Demo 8 — Write Attempt + Recovery</span><span class="tag guard">Security demo</span></div>
-      <div class="msg-u"><span class="who">You</span><span class="msg-t">Delete all cancelled orders from the database.</span></div>
-      <div class="msg-b">
-        <div class="lsteps">
-          <div class="ls thinking">◌ &nbsp;turn 1 — calling model (sees system prompt: read-only)…</div>
-        </div>
-        <div class="answer">I can't do that — this connection is strictly read-only. DELETE, INSERT, UPDATE, and all DDL are blocked by the SQL firewall before they reach the database. I can show you the cancelled orders if that helps.</div>
-        <div class="stamps">
-          <span class="stamp ok">✓ no tool call made</span>
-          <span class="stamp ok">⛨ read-only</span>
-          <span class="stamp meta">1 turn</span><span class="stamp meta">890ms</span>
-        </div>
-      </div>
-      <div class="msg-u"><span class="who">You</span><span class="msg-t">OK, show me the cancelled orders breakdown by month then.</span></div>
-      <div class="msg-b">
-        <div class="lsteps">
-          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
-          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT strftime('%Y-%m', order_date) AS month, COUNT(*) AS cancelled FROM orders WHERE status='cancelled'…</span></div>
-        </div>
-        <div class="answer">There are <strong>78 cancelled orders</strong> total. August 2025 had the most (9). Most months averaged 2–3.</div>
-        <div class="stamps">
-          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
-          <span class="stamp meta">12 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">37ms</span>
-        </div>
-        <div class="sqlwrap">
-          <div class="sql-lbl">SQL executed</div>
-          <div class="sql-code">SELECT strftime('%Y-%m', order_date) AS month,
-       COUNT(*) AS cancelled
-FROM orders
-WHERE status = 'cancelled'
-GROUP BY month
-ORDER BY month
-LIMIT 200</div>
-        </div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>month</th><th>cancelled</th></tr></thead>
-          <tbody>
-            <tr><td>2025-01</td><td class="n">1</td></tr>
-            <tr><td>2025-02</td><td class="n">2</td></tr>
-            <tr><td>2025-03</td><td class="n">3</td></tr>
-            <tr><td>2025-04</td><td class="n">2</td></tr>
-            <tr><td>2025-05</td><td class="n">2</td></tr>
-            <tr><td>2025-06</td><td class="n">2</td></tr>
-            <tr><td>2025-07</td><td class="n">2</td></tr>
-            <tr><td>2025-08</td><td class="n">9</td></tr>
-          </tbody>
-        </table><div class="trunc">+ 4 more months not shown</div></div>
-      </div>
+  <div style="margin-top:22px;padding:16px 18px;border:var(--bw) solid var(--ink);background:var(--card);box-shadow:var(--sh-sm)">
+    <div style="font-family:'Archivo Black';font-size:13px;margin-bottom:8px">How the hub stays honest</div>
+    <div style="font-size:13.5px;line-height:1.65">
+      Each source is queried by its own independent agent, in its own thread, behind its own firewall — they don't even know they're part of a group. If one source is down, you still get an answer from the rest, with a clear note about what was missing. And the synthesizer only runs when more than one source actually returned data, so a single-source question costs nothing extra. Live progress streams in as it happens, every event tagged with which database it came from.
     </div>
-
-    <!-- 9 -->
-    <div class="convo">
-      <div class="convo-hdr"><span>Demo 9 — Low Stock Alert</span><span class="tag ops">Ops query</span></div>
-      <div class="msg-u"><span class="who">You</span><span class="msg-t">Which t-shirts are critically low on stock — under 10 units? I need to reorder.</span></div>
-      <div class="msg-b">
-        <div class="lsteps">
-          <div class="ls thinking">◌ &nbsp;turn 1 — calling model…</div>
-          <div class="ls sql">✓ &nbsp;executed &nbsp;<span class="ls-sql">SELECT brand, color, size, stock_quantity, price FROM t_shirts WHERE stock_quantity &lt; 10 ORDER BY stock_quantity…</span></div>
-        </div>
-        <div class="answer"><strong>5 SKUs</strong> are critically low. Levi Blue XL and Van Heusen Blue XS are most urgent at just 5 units each. Nike White XL (₹299) is the cheapest item at risk.</div>
-        <div class="stamps">
-          <span class="stamp ok">✓ firewall pass</span><span class="stamp ok">⛨ read-only</span>
-          <span class="stamp meta">5 rows</span><span class="stamp meta">1 turn</span><span class="stamp meta">22ms</span>
-        </div>
-        <div class="sqlwrap">
-          <div class="sql-lbl">SQL executed</div>
-          <div class="sql-code">SELECT brand, color, size, stock_quantity, price
-FROM t_shirts
-WHERE stock_quantity &lt; 10
-ORDER BY stock_quantity
-LIMIT 200</div>
-        </div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>brand</th><th>color</th><th>size</th><th>stock_qty</th><th>price</th></tr></thead>
-          <tbody>
-            <tr><td>Levi</td><td>Blue</td><td>XL</td><td class="n">5</td><td class="n">799.0</td></tr>
-            <tr><td>Van Heusen</td><td>Blue</td><td>XS</td><td class="n">5</td><td class="n">399.0</td></tr>
-            <tr><td>Puma</td><td>Blue</td><td>XS</td><td class="n">5</td><td class="n">599.0</td></tr>
-            <tr><td>Levi</td><td>Red</td><td>XS</td><td class="n">7</td><td class="n">599.0</td></tr>
-            <tr><td>Nike</td><td>White</td><td>XL</td><td class="n">8</td><td class="n">299.0</td></tr>
-          </tbody>
-        </table></div>
-      </div>
-    </div>
-
-  </div><!-- /convos -->
+  </div>
 </div>
 </div>
 
@@ -650,22 +535,32 @@ LIMIT 200</div>
 <div class="section" id="security">
 <div class="wrap">
   <div class="eyebrow">Security</div>
-  <h2>The firewall catches everything harmful</h2>
-  <p class="lead">Every statement the LLM produces is parsed to an AST by sqlglot before touching the DB. 10 attack vectors tested and blocked in CI.</p>
-  <div class="guard-grid">
-    <div class="gc"><div class="gc-head"><div class="gc-icon">🗑</div><div class="gc-name">DELETE</div></div><div class="gc-sql">DELETE FROM orders</div><div class="gc-res">⊘ Only SELECT queries are allowed. Got: Delete.</div></div>
-    <div class="gc"><div class="gc-head"><div class="gc-icon">💣</div><div class="gc-name">DROP TABLE</div></div><div class="gc-sql">DROP TABLE t_shirts</div><div class="gc-res">⊘ Only SELECT queries are allowed. Got: Drop.</div></div>
-    <div class="gc"><div class="gc-head"><div class="gc-icon">✏️</div><div class="gc-name">UPDATE</div></div><div class="gc-sql">UPDATE t_shirts SET price=0</div><div class="gc-res">⊘ Only SELECT queries are allowed. Got: Update.</div></div>
-    <div class="gc"><div class="gc-head"><div class="gc-icon">⛓</div><div class="gc-name">Multi-statement</div></div><div class="gc-sql">SELECT 1; DROP TABLE orders</div><div class="gc-res">⊘ Exactly one statement allowed, got 2.</div></div>
-    <div class="gc"><div class="gc-head"><div class="gc-icon">🔌</div><div class="gc-name">load_extension</div></div><div class="gc-sql">SELECT load_extension('evil.so')</div><div class="gc-res">⊘ Function 'load_extension' blocked by policy.</div></div>
-    <div class="gc"><div class="gc-head"><div class="gc-icon">👁</div><div class="gc-name">Schema exfil</div></div><div class="gc-sql">SELECT * FROM sqlite_master</div><div class="gc-res">⊘ Table 'sqlite_master' not in allowed schema.</div></div>
-    <div class="gc"><div class="gc-head"><div class="gc-icon">📋</div><div class="gc-name">SELECT INTO</div></div><div class="gc-sql">SELECT * INTO stolen FROM customers</div><div class="gc-res">⊘ Forbidden operation in query: Into.</div></div>
-    <div class="gc"><div class="gc-head"><div class="gc-icon">🔧</div><div class="gc-name">PRAGMA</div></div><div class="gc-sql">PRAGMA table_info(t_shirts)</div><div class="gc-res">⊘ Only SELECT queries are allowed. Got: Pragma.</div></div>
-    <div class="gc"><div class="gc-head"><div class="gc-icon">😴</div><div class="gc-name">pg_sleep</div></div><div class="gc-sql">SELECT pg_sleep(30)</div><div class="gc-res">⊘ Function 'pg_sleep' blocked by policy.</div></div>
+  <h2>The model proposes. The firewall disposes.</h2>
+  <p class="lead">The language model is treated as an untrusted query author — for both SQL and Mongo. Every query it writes is checked in code before it touches a database, and the connection itself physically can't write. Here's what gets stopped, on each engine.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px" class="sec-grid">
+    <div>
+      <div style="font-family:'Archivo Black';font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;background:#2F6BFF;display:inline-block"></span>SQL firewall · sqlglot AST</div>
+      <div class="guard-grid" style="grid-template-columns:1fr">
+        <div class="gc"><div class="gc-head"><div class="gc-icon">🗑</div><div class="gc-name">DELETE / UPDATE</div></div><div class="gc-sql">DELETE FROM orders</div><div class="gc-res">⊘ Only SELECT queries are allowed.</div></div>
+        <div class="gc"><div class="gc-head"><div class="gc-icon">💣</div><div class="gc-name">DROP TABLE</div></div><div class="gc-sql">DROP TABLE t_shirts</div><div class="gc-res">⊘ Only SELECT queries are allowed.</div></div>
+        <div class="gc"><div class="gc-head"><div class="gc-icon">⛓</div><div class="gc-name">Multi-statement</div></div><div class="gc-sql">SELECT 1; DROP TABLE orders</div><div class="gc-res">⊘ Exactly one statement allowed, got 2.</div></div>
+        <div class="gc"><div class="gc-head"><div class="gc-icon">👁</div><div class="gc-name">Schema exfil</div></div><div class="gc-sql">SELECT * FROM sqlite_master</div><div class="gc-res">⊘ Table not in allowed schema.</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'Archivo Black';font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;background:#00C16A;display:inline-block"></span>Mongo firewall · pipeline allowlist</div>
+      <div class="guard-grid" style="grid-template-columns:1fr">
+        <div class="gc"><div class="gc-head"><div class="gc-icon">📤</div><div class="gc-name">$out / $merge</div></div><div class="gc-sql">[{ "$out": "stolen_copy" }]</div><div class="gc-res">⊘ Write stages are never allowed.</div></div>
+        <div class="gc"><div class="gc-head"><div class="gc-icon">⚡</div><div class="gc-name">$where (arbitrary JS)</div></div><div class="gc-sql">{ "$where": "function(){…}" }</div><div class="gc-res">⊘ Code-execution operators blocked.</div></div>
+        <div class="gc"><div class="gc-head"><div class="gc-icon">🧬</div><div class="gc-name">$function, nested</div></div><div class="gc-sql">$project → { "$function": … }</div><div class="gc-res">⊘ Caught at any nesting depth.</div></div>
+        <div class="gc"><div class="gc-head"><div class="gc-icon">👁</div><div class="gc-name">Unlisted collection</div></div><div class="gc-sql">find on users_pii</div><div class="gc-res">⊘ Collection not in allowed schema.</div></div>
+      </div>
+    </div>
   </div>
+
   <div style="margin-top:20px;padding:14px 18px;border:var(--bw) solid var(--ink);background:var(--card);box-shadow:var(--sh-sm);font-family:'JetBrains Mono';font-size:12px;line-height:1.8">
-    <strong>Layer 2:</strong> Even if something slips the AST, the DB session is physically read-only at the driver level.
-    INSERT/UPDATE/DELETE fail at the connection. 36/36 CI tests verify both layers hold on every push.
+    <strong>Layer 2 — the connection itself can't write.</strong> SQL sessions are opened read-only at the driver level (<code>PRAGMA query_only</code>, <code>default_transaction_read_only</code>). For Mongo, the connection object is capability-narrowed — insert / update / delete / drop methods aren't reachable on it at all, not merely permission-checked — plus a startup probe that warns if your credentials carry write rights. <strong>111 CI tests</strong> verify both layers hold on every push, on both engines.
   </div>
 </div>
 </div>
@@ -673,58 +568,26 @@ LIMIT 200</div>
 <!-- SCHEMA -->
 <div class="section" id="schema">
 <div class="wrap">
-  <div class="eyebrow">Demo database</div>
-  <h2>What's in the demo DB</h2>
-  <p class="lead">Indian e-commerce t-shirt store. 4,091 rows, 5 tables. Swap in your own DB via one line in config.yaml.</p>
+  <div class="eyebrow">The bundled demo</div>
+  <h2>Two databases, zero setup</h2>
+  <p class="lead">A seeded SQLite store and an in-memory MongoDB collection of reviews &amp; tickets — both ship with the repo, so you can try every example above (single-source or multi-source) without connecting anything. Swap in your own with one line of config.</p>
   <div class="schema-grid">
     <div class="sc">
-      <div class="sc-head">t_shirts · 89 rows</div>
+      <div class="sc-head" style="display:flex;gap:7px;align-items:center"><span style="width:8px;height:8px;background:#2F6BFF;border-radius:50%"></span>shop_sql · SQLite · 5 tables</div>
       <div class="sc-cols">
-        <span class="pk">t_shirt_id PK</span>
-        <span>brand TEXT</span><span>color TEXT</span>
-        <span>size TEXT</span><span>price REAL</span>
-        <span>stock_quantity INT</span>
+        <span class="pk">t_shirts · 89</span><span>customers · 200</span>
+        <span>orders · 1,500</span><span>order_items · 2,214</span>
+        <span>discounts · 29</span>
       </div>
-      <div class="sc-note">5 brands · 5 sizes · multiple colors</div>
+      <div class="sc-note">Indian e-commerce t-shirt store · structured, relational, joinable</div>
     </div>
     <div class="sc">
-      <div class="sc-head">customers · 200 rows</div>
+      <div class="sc-head" style="display:flex;gap:7px;align-items:center"><span style="width:8px;height:8px;background:#00C16A;border-radius:50%"></span>shop_reviews · MongoDB · 2 collections</div>
       <div class="sc-cols">
-        <span class="pk">customer_id PK</span>
-        <span>name TEXT</span><span>city TEXT</span>
-        <span>signup_date TEXT</span>
+        <span class="pk">product_reviews · 102</span>
+        <span>support_tickets · 40</span>
       </div>
-      <div class="sc-note">10 Indian cities</div>
-    </div>
-    <div class="sc">
-      <div class="sc-head">orders · 1,500 rows</div>
-      <div class="sc-cols">
-        <span class="pk">order_id PK</span>
-        <span class="fk">customer_id FK</span>
-        <span>order_date TEXT</span>
-        <span>status TEXT</span>
-      </div>
-      <div class="sc-note">completed / cancelled / returned</div>
-    </div>
-    <div class="sc">
-      <div class="sc-head">order_items · 2,214 rows</div>
-      <div class="sc-cols">
-        <span class="pk">order_item_id PK</span>
-        <span class="fk">order_id FK</span>
-        <span class="fk">t_shirt_id FK</span>
-        <span>quantity INT</span>
-        <span>unit_price REAL</span>
-      </div>
-      <div class="sc-note">revenue lives here</div>
-    </div>
-    <div class="sc">
-      <div class="sc-head">discounts · 29 rows</div>
-      <div class="sc-cols">
-        <span class="pk">discount_id PK</span>
-        <span class="fk">t_shirt_id FK</span>
-        <span>pct_discount REAL</span>
-      </div>
-      <div class="sc-note">29 of 89 shirts · 5–25% off</div>
+      <div class="sc-note">Semi-structured, schema-varying — the honest reason you'd reach for Mongo. References the same product &amp; customer IDs as the SQL store, so the two genuinely join.</div>
     </div>
   </div>
 </div>
