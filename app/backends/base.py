@@ -46,6 +46,14 @@ class BackendAdapter(Protocol):
         """The Anthropic tool definition the model calls to query this backend."""
         ...
 
+    def parse_tool_input(self, tool_input: dict) -> str:
+        """Extract the raw query string from Claude's tool_use.input for this
+        backend's tool schema. SQL: input['sql']. Mongo: the whole structured
+        input, serialized to one canonical JSON string. Always returns a
+        plain str so every downstream field (AgentStep.sql, SSE payloads,
+        StepOut.sql) stays string-typed regardless of backend."""
+        ...
+
     def system_prompt(self, dialect: str, schema_text: str) -> str:
         """Build the system prompt fragment for this backend's query language."""
         ...

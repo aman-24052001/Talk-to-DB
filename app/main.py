@@ -42,6 +42,7 @@ async def lifespan(app: FastAPI):
 
     app.state.cfg = cfg
     app.state.engine = backend.engine
+    app.state.dialect = snapshot.dialect
     app.state.schema = backend.schema
     app.state.executor = backend.executor
     app.state.adapter = backend.adapter
@@ -50,7 +51,7 @@ async def lifespan(app: FastAPI):
     yield
     # B1 FIX: clean shutdown of thread pool
     app.state.executor.shutdown()
-    backend.engine.dispose()
+    backend.close()
 
 
 app = FastAPI(
@@ -96,7 +97,7 @@ def health(request: Request):
     return {
         "status": "ok",
         "version": __version__,
-        "dialect": request.app.state.engine.url.get_backend_name(),
+        "dialect": request.app.state.dialect,
         "model": cfg.anthropic.model,
         "read_only": True,
         "api_key_present": bool(cfg.resolved_api_key),

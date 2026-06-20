@@ -184,8 +184,8 @@ class QueryAgent:
                 results_block = []
 
                 for tu in tool_uses:
-                    raw_sql = str(tu.input.get("sql", ""))
-                    payload, step, qr = self._handle_tool_call(raw_sql, dialect, snapshot.table_names)
+                    raw_query = self._adapter.parse_tool_input(tu.input)
+                    payload, step, qr = self._handle_tool_call(raw_query, dialect, snapshot.table_names)
                     steps.append(step)
 
                     if step.kind == "blocked":
@@ -194,7 +194,7 @@ class QueryAgent:
                         yield _sse("blocked", {
                             "kind": "blocked",
                             "turn": turns,
-                            "sql": raw_sql,
+                            "sql": raw_query,
                             "reason": step.detail,
                         })
                     elif step.kind == "error":
@@ -279,21 +279,21 @@ class QueryAgent:
 
     # ── tool call handler ──────────────────────────────────────────────────
     def _handle_tool_call(
-        self, raw_sql: str, dialect: str, known_tables: set[str]
+        self, raw_query: str, dialect: str, known_tables: set[str]
     ) -> tuple[str, AgentStep, QueryResult | None]:
         try:
             validated = self._adapter.validate(
-                raw_sql,
+                raw_query,
                 dialect=dialect,
                 known_tables=known_tables,
                 max_rows=self._cfg.guardrails.max_rows,
             )
         except self._adapter.RejectedError as e:
-            self._adapter.audit("blocked", raw_sql, reason=str(e))
-            log.info("firewall blocked: %s | %s", raw_sql[:120], e)
+            self._adapter.audit("blocked", raw_query, reason=str(e))
+            log.info("firewall blocked: %s | %s", raw_query[:120], e)
             return (
-                f"REJECTED by SQL firewall: {e}",
-                AgentStep(kind="blocked", sql=raw_sql, detail=str(e)),
+                f"REJECTED by firewall: {e}",
+                AgentStep(kind="blocked", sql=raw_query, detail=str(e)),
                 None,
             )
 

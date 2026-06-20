@@ -31,7 +31,7 @@ class FakeAnthropicClient:
             ])
         if self.calls == 2:
             last = kwargs["messages"][-1]["content"][0]["content"]
-            assert "REJECTED by SQL firewall" in last
+            assert "REJECTED by firewall" in last
             return types.SimpleNamespace(stop_reason="tool_use", content=[
                 _Block(type="tool_use", id="t2", name="execute_sql",
                        input={"sql": "SELECT brand, SUM(stock_quantity) AS stock "

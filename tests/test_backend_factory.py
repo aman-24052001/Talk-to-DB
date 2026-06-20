@@ -48,17 +48,33 @@ def test_build_backend_sql_returns_working_pieces():
         assert len(snapshot.tables) > 0
     finally:
         backend.executor.shutdown()
-        backend.engine.dispose()
+        backend.close()
 
 
 def test_build_backend_rejects_unimplemented_type():
     cfg = AppConfig()
-    cfg.database.type = "mongodb"  # not implemented yet — must fail fast and clearly
+    cfg.database.type = "redis"  # not implemented — must fail fast and clearly
     try:
         build_backend(cfg)
         assert False, "expected ValueError for unimplemented backend type"
     except ValueError as e:
-        assert "mongodb" in str(e)
+        assert "redis" in str(e)
+
+
+def test_build_backend_mongodb_branch_constructs_without_a_live_server():
+    """MongoClient construction and get_default_database() are pure
+    string-parsing — no network call happens until something actually
+    queries, so this should succeed even with no Mongo server reachable."""
+    from app.backends.mongo.adapter import MongoAdapter
+
+    cfg = AppConfig()
+    cfg.database.url = "mongodb://localhost:27017/talktodb_test_no_such_server"
+    backend = build_backend(cfg)
+    try:
+        assert isinstance(backend.adapter, MongoAdapter)
+        assert callable(backend.close)
+    finally:
+        backend.close()
 
 
 # ── QueryAgent rename + adapter injection (back-compat) ─────────────────
@@ -78,7 +94,7 @@ def test_query_agent_without_adapter_defaults_to_sql_adapter():
         assert isinstance(agent._adapter, SQLAdapter)
     finally:
         backend.executor.shutdown()
-        backend.engine.dispose()
+        backend.close()
 
 
 def test_query_agent_uses_injected_adapter_when_given():
@@ -93,4 +109,4 @@ def test_query_agent_uses_injected_adapter_when_given():
         assert agent._adapter is sentinel_adapter
     finally:
         backend.executor.shutdown()
-        backend.engine.dispose()
+        backend.close()

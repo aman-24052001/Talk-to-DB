@@ -36,6 +36,9 @@ class SQLAdapter:
     def tool_schema(self) -> dict:
         return EXECUTE_SQL_TOOL
 
+    def parse_tool_input(self, tool_input: dict) -> str:
+        return str(tool_input.get("sql", ""))
+
     def system_prompt(self, dialect: str, schema_text: str) -> str:
         return build_system_prompt(dialect, schema_text)
 

@@ -12,14 +12,17 @@ anthropic:
   model: "claude-sonnet-4-6"
 
 database:
-  # Any SQLAlchemy URL. Examples:
-  #   sqlite:///data/demo.db            ← bundled demo (default)
+  # SQL: any SQLAlchemy URL. Mongo: a mongodb:// or mongodb+srv:// URL — the
+  # backend is auto-detected from the scheme, no extra config needed.
+  # Examples:
+  #   sqlite:///data/demo.db                          ← bundled demo (default)
   #   postgresql+psycopg2://user:pass@host:5432/dbname
   #   mysql+pymysql://user:pass@host:3306/dbname
+  #   mongodb://user:pass@host:27017/dbname            ← database name required in the path
   url: "sqlite:///data/demo.db"
   # type: "sql"                       # optional override; auto-detected from
-                                       # the URL scheme otherwise. Only "sql"
-                                       # is implemented today.
+                                       # the URL scheme otherwise. Implemented:
+                                       # "sql" (sqlite/postgres/mysql), "mongodb".
 
 # ── Everything below is optional — safe defaults are built in ──
 guardrails:
@@ -29,8 +32,8 @@ guardrails:
   statement_timeout_seconds: 15     # per-query wall-clock timeout
   max_agent_turns: 6                # self-correction budget before giving up
   history_turns: 6                  # how many prior conversation turns to keep in context
-  allowed_tables: []                # empty = all introspected tables
-  denied_tables: []                 # always hidden (e.g. ["users_pii", "audit_log"])
+  allowed_tables: []                # empty = all introspected tables/collections
+  denied_tables: []                 # always hidden (e.g. ["users_pii", "audit_log"]) — applies to SQL tables and Mongo collections alike
   sample_rows_in_schema: 3          # 0 = never send real cell values to the LLM
 
 server:

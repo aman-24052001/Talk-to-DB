@@ -8,7 +8,7 @@ once that adapter exists, main.py and the agent do not change at all.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Callable
 
 from app.backends.base import BackendAdapter
 from app.backends.sql import SQLAdapter
@@ -21,10 +21,11 @@ from app.db.introspect import SchemaService
 @dataclass
 class Backend:
     """Everything main.py needs to wire up one connected datastore."""
-    engine: Any           # SQLAlchemy Engine today; backend-specific in general
+    engine: Any           # SQLAlchemy Engine for "sql"; backend-specific client otherwise
     schema: SchemaService
     executor: QueryExecutor
     adapter: BackendAdapter
+    close: Callable[[], None]   # generic shutdown — never assume .dispose() exists
 
 
 def build_backend(cfg: AppConfig) -> Backend:
@@ -35,11 +36,18 @@ def build_backend(cfg: AppConfig) -> Backend:
         schema = SchemaService(engine, cfg)
         executor = QueryExecutor(engine, cfg)
         adapter = SQLAdapter(executor)
-        return Backend(engine=engine, schema=schema, executor=executor, adapter=adapter)
+        return Backend(
+            engine=engine, schema=schema, executor=executor, adapter=adapter,
+            close=engine.dispose,
+        )
+
+    if backend_type == "mongodb":
+        from app.backends.mongo.factory import build_mongo_backend
+        return build_mongo_backend(cfg)
 
     raise ValueError(
         f"Unsupported database backend '{backend_type}'. "
-        "Only SQL backends (sqlite/postgres/mysql, via database.url) are "
-        "implemented today. Set database.type explicitly only if you need "
-        "to override URL-scheme inference."
+        "Implemented: 'sql' (sqlite/postgres/mysql via database.url), "
+        "'mongodb'. Set database.type explicitly only if you need to "
+        "override URL-scheme inference."
     )
